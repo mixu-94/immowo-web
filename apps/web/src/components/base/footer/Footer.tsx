@@ -8,19 +8,19 @@ const Footer = () => {
       <div className="flex flex-col items-center justify-between md:flex-row">
         {/* Left Section: Links */}
         <div className="mb-4 flex flex-col items-center md:mb-0 md:flex-row md:space-x-6">
-          <Link href="/privacy-policy" className="hover:underline">
+          <Link href="/datenschutz" className="hover:underline">
             Datenschutzerklärung
           </Link>
           <span className="hidden text-white md:inline-block">|</span>
-          <Link href="/terms-of-service" className="hover:underline">
+          <Link href="/agb" className="hover:underline">
             AGB
           </Link>
           <span className="hidden text-white md:inline-block">|</span>
-          <Link href="/terms-of-service" className="hover:underline">
-            Wiederrufungsrecht
+          <Link href="/widerruf" className="hover:underline">
+            Widerrufungsrecht
           </Link>
           <span className="hidden text-white md:inline-block">|</span>
-          <Link href="/terms-of-service" className="hover:underline">
+          <Link href="/cookies" className="hover:underline">
             Cookie-Richtlinien
           </Link>
           <span className="hidden text-white md:inline-block">|</span>

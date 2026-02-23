@@ -97,7 +97,12 @@ html {
 /* Base styles */
 body {
   font-family: "Outfit", sans-serif;
-  color: var(--white);
+  color: var(--a-white);
+  background-color: var(--grey);
+}
+p {
+  font-family: "Outfit", sans-serif;
+  color: var(--a-white);
   background-color: var(--grey);
 }
 
@@ -380,8 +385,6 @@ p.big-description {
   ); /* Slightly reduce the size of the logo inside the expanded dot */
 }
 
-
-
 @layer base {
   :root {
     --background: 0 0% 100%;
@@ -437,8 +440,6 @@ p.big-description {
     --chart-5: 340 75% 55%;
   }
 }
-
-
 
 @layer base {
   * {
