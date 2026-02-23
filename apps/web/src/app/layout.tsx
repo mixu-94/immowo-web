@@ -14,10 +14,12 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en" className="bg-[var(--a-grey-6)]">
+    <html lang="en" className="">
       <ConsentProvider>
         <CookieBanner />
-        <body className={`$ antialiased mt-14`}>{children}</body>
+        <body className={`$ antialiased mt-14 bg-[var(--a-black-3)] `}>
+          {children}
+        </body>
       </ConsentProvider>
     </html>
   );

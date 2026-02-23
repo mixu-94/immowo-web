@@ -55,7 +55,7 @@ function Navbar({}: NavbarProps) {
       initial={{ y: 0 }}
       animate={{ y: isVisible ? 0 : -120 }}
       transition={{ ease: "easeOut", duration: 0.5 }}
-      className="fixed left-0 top-0 z-50 w-full border-b border-white/10 bg-[#0b1020]/30 backdrop-blur-xl"
+      className="fixed left-0 top-0 z-50 w-full border-b border-white/10 bg-[#050B1A]/30 backdrop-blur-xl"
     >
       <div className="mx-auto flex h-16 w-full max-w-7xl items-center justify-between px-6">
         {/* Left Section - Logo */}
