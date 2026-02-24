@@ -1,6 +1,6 @@
 import Image from "next/image";
 import Link from "next/link";
-import type { ReferenceProperty } from "./types";
+import type { ReferenceProperty } from "../../lib/types/references";
 
 type Props = { project: ReferenceProperty };
 

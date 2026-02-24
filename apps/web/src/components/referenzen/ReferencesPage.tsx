@@ -2,8 +2,7 @@
 import { ReferencesShell } from "./ReferencesShell";
 import { ReferencesHeader } from "./ReferencesHeader";
 import { ReferencesExplorer } from "./ReferencesExplorer";
-import { referenceProjects } from "./data";
-
+import { referenceProjects } from "@/lib/data/references";
 export function ReferencesPage() {
   return (
     <ReferencesShell>

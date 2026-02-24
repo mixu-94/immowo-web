@@ -1,4 +1,4 @@
-import type { ReferenceProperty } from "./types";
+import type { ReferenceProperty } from "../../lib/types/references";
 import { ReferenceCard } from "./ReferencesCard";
 
 type Props = {

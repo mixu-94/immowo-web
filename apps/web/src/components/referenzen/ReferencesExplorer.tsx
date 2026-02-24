@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import type { ReferenceProperty } from "./types";
+import type { ReferenceProperty } from "../../lib/types/references";
 import { ReferencesToolbar } from "./ReferencesToolbar";
 import { ReferencesGrid } from "./ReferencesGrid";
 

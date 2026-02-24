@@ -1,7 +1,7 @@
 // components/referenzen/ReferenceDetail.tsx
 import Image from "next/image";
 import Link from "next/link";
-import type { ReferenceProperty } from "./types";
+import type { ReferenceProperty } from "../../lib/types/references";
 import { ReferencesShell } from "./ReferencesShell";
 
 type Props = { project: ReferenceProperty };

@@ -1,6 +1,6 @@
 // app/referenzen/[slug]/page.tsx
 import { notFound } from "next/navigation";
-import { referenceProjects } from "@/components/referenzen/data.ts";
+import { referenceProjects } from "@/lib/data/references";
 import { ReferenceDetail } from "@/components/referenzen/ReferenceDetail";
 
 type Props = { params: { slug: string } };
