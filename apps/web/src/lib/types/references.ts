@@ -32,7 +32,11 @@ export type ReferenceMediaItem =
     | { type: "video"; src: string; posterSrc?: string };
 
 export type ReferenceDocuments = {
-    caseStudyPdfUrl?: string; // fehlt => UI zeigt "auf Anfrage"
+    /**
+     * Wenn URL fehlt => UI zeigt "AUF ANFRAGE"
+     * (passt zur diskreten Premium-Positionierung)
+     */
+    caseStudyPdfUrl?: string;
     exposeSampleUrl?: string;
     brochureUrl?: string;
 };
@@ -49,8 +53,7 @@ export type ReferenceFacts = {
 export type ReferenceLocation = {
     region?: string; // "Schwaben"
     label?: string; // "Augsburg (Region)"
-    // optional diskrete Geo-Koordinate
-    geo?: { lat: number; lng: number };
+    geo?: { lat: number; lng: number }; // optional diskret
 };
 
 export type ReferenceSEO = {
@@ -62,6 +65,29 @@ export type ReferenceSEO = {
 export type ReferenceTimelineItem = {
     title: string;
     text: string;
+};
+
+/**
+ * Für "große Referenzen"/Case Studies:
+ * - sections: flexible Textabschnitte
+ * - caseStudy: strukturierte Story (Challenge/Approach/Result)
+ * - testimonial: optional, wenn ihr sowas nutzen dürft
+ */
+export type ReferenceSection = {
+    heading: string;        // z.B. "Ausgangslage"
+    content: string;        // 1-2 Absätze (Plaintext oder Markdown light)
+};
+
+export type ReferenceCaseStudy = {
+    challenge?: string;
+    approach?: string;
+    result?: string;
+};
+
+export type ReferenceTestimonial = {
+    quote: string;
+    author?: string;
+    role?: string;
 };
 
 export type Reference = {
@@ -77,15 +103,14 @@ export type Reference = {
     // diskret
     location: ReferenceLocation;
 
-    description: string;
-    highlights: string[];
+    description: string;   // Kurzbeschreibung (2–3 Sätze)
+    highlights: string[];  // kurze Badge-Bullets
 
     facts?: ReferenceFacts;
     kpis?: ReferenceKPI[];
 
     coverImage?: { src: string; alt: string };
 
-    // für Detailseite
     media?: {
         gallery?: ReferenceMediaItem[];
     };
@@ -94,6 +119,11 @@ export type Reference = {
 
     services?: ReferenceService[];
     timeline?: ReferenceTimelineItem[];
+
+    // Long-form content
+    sections?: ReferenceSection[];
+    caseStudy?: ReferenceCaseStudy;
+    testimonial?: ReferenceTestimonial;
 
     // flags
     isFeatured?: boolean;
@@ -112,3 +142,10 @@ export type ReferenceRow = {
         "id" | "slug" | "title" | "subtitle" | "category" | "year" | "location" | "coverImage" | "isFeatured"
     >[];
 };
+
+/**
+ * ✅ Compatibility Alias:
+ * Viele deiner Komponenten importieren noch "ReferenceProperty".
+ * Damit bricht nichts, auch wenn du noch nicht überall umgestellt hast.
+ */
+export type ReferenceProperty = Reference;
