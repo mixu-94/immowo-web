@@ -1,13 +1,28 @@
 import { NextResponse } from "next/server";
 import nodemailer from "nodemailer";
 
-export const runtime = "nodejs"; // ✅ IMPORTANT: nodemailer needs Node runtime
+export const runtime = "nodejs"; // nodemailer needs Node runtime
 
 type Payload = {
     name: string;
     email: string;
-    message: string;
-    // simple spam honeypot
+
+    phone?: string;
+    contactPreference?: "telefon" | "email";
+    topic?: string;
+
+    message?: string;
+
+    callbackRequested?: boolean;
+
+    // Terminwunsch (MVP)
+    preferredDate?: string; // yyyy-mm-dd
+    preferredTimeWindow?: string; // e.g. "09-12"
+    preferredTime?: string; // hh:mm
+    durationMinutes?: number;
+    tz?: string;
+
+    // honeypot
     website?: string;
 };
 
@@ -21,25 +36,57 @@ export async function POST(req: Request) {
 
         const name = String(body.name ?? "").trim();
         const email = String(body.email ?? "").trim();
+
+        const phone = String(body.phone ?? "").trim();
+        const topic = String(body.topic ?? "").trim();
+        const contactPreference = String(body.contactPreference ?? "").trim();
+        const callbackRequested = Boolean(body.callbackRequested);
+
         const message = String(body.message ?? "").trim();
+
+        const preferredDate = String(body.preferredDate ?? "").trim();
+        const preferredTimeWindow = String(body.preferredTimeWindow ?? "").trim();
+        const preferredTime = String(body.preferredTime ?? "").trim();
+        const durationMinutes = Number(body.durationMinutes ?? 15);
+        const tz = String(body.tz ?? "").trim();
+
         const website = String(body.website ?? "").trim(); // honeypot
 
-        // honeypot filled => bot
+        // bot => pretend ok
         if (website) {
             return NextResponse.json({ ok: true }, { status: 200 });
         }
 
-        if (!name || !email || !message) {
+        if (!name || !email) {
             return NextResponse.json(
-                { ok: false, error: "Bitte alle Felder ausfüllen." },
-                { status: 400 },
+                { ok: false, error: "Bitte Name und E-Mail ausfüllen." },
+                { status: 400 }
             );
         }
 
         if (!isValidEmail(email)) {
             return NextResponse.json(
                 { ok: false, error: "Bitte eine gültige E-Mail angeben." },
-                { status: 400 },
+                { status: 400 }
+            );
+        }
+
+        // MVP-Validierung:
+        // Entweder Nachricht ODER Rückruf mit Telefonnummer (Termin optional)
+        const hasMessage = message.length > 0;
+        const hasPhoneForCallback = callbackRequested ? phone.length > 0 : true;
+
+        if (!hasMessage && !callbackRequested) {
+            return NextResponse.json(
+                { ok: false, error: "Bitte eine Nachricht schreiben oder Rückruf auswählen." },
+                { status: 400 }
+            );
+        }
+
+        if (!hasPhoneForCallback) {
+            return NextResponse.json(
+                { ok: false, error: "Für einen Rückruf bitte eine Telefonnummer angeben." },
+                { status: 400 }
             );
         }
 
@@ -56,7 +103,7 @@ export async function POST(req: Request) {
         if (!CONTACT_TO_EMAIL || !SMTP_HOST || !SMTP_PORT || !SMTP_USER || !SMTP_PASS) {
             return NextResponse.json(
                 { ok: false, error: "Server-Mail-Konfiguration fehlt (ENV)." },
-                { status: 500 },
+                { status: 500 }
             );
         }
 
@@ -70,17 +117,29 @@ export async function POST(req: Request) {
             },
         });
 
-        const subject = `Kontaktanfrage: ${name}`;
+        const subjectParts = ["Kontaktanfrage", name];
+        if (topic) subjectParts.push(`(${topic})`);
+        const subject = subjectParts.join(": ");
+
         const text = [
             `Name: ${name}`,
             `E-Mail: ${email}`,
+            phone ? `Telefon: ${phone}` : `Telefon: -`,
+            contactPreference ? `Bevorzugt: ${contactPreference}` : `Bevorzugt: -`,
+            topic ? `Thema: ${topic}` : `Thema: -`,
+            `Rückruf gewünscht: ${callbackRequested ? "Ja" : "Nein"}`,
+            "",
+            "Terminwunsch:",
+            `Datum: ${preferredDate || "-"}`,
+            `Zeitfenster: ${preferredTimeWindow || "-"}`,
+            `Uhrzeit (optional): ${preferredTime || "-"}`,
+            `Dauer: ${Number.isFinite(durationMinutes) ? `${durationMinutes} Min.` : "-"}`,
+            `Zeitzone: ${tz || "-"}`,
             "",
             "Nachricht:",
-            message,
+            message || "-",
         ].join("\n");
 
-        // ⚠️ For deliverability: FROM should be your own mailbox/domain.
-        // We'll set replyTo to the user.
         await transporter.sendMail({
             from: `"${SMTP_FROM_NAME ?? "Website"}" <${SMTP_USER}>`,
             to: CONTACT_TO_EMAIL,
@@ -90,10 +149,10 @@ export async function POST(req: Request) {
         });
 
         return NextResponse.json({ ok: true }, { status: 200 });
-    } catch (err) {
+    } catch {
         return NextResponse.json(
             { ok: false, error: "Senden fehlgeschlagen. Bitte später erneut versuchen." },
-            { status: 500 },
+            { status: 500 }
         );
     }
 }
