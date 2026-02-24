@@ -1,7 +1,7 @@
 // src/lib/data/listings.ts
 import type { CategoryRow, Listing, EstateDetails } from "@/lib/types/listings";
 
-const ESTATE_BASE_PATH = "/estates";
+const ESTATE_BASE_PATH = "/objekte";
 
 function slugify(input: string) {
     return input
