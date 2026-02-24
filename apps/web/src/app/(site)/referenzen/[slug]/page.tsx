@@ -1,13 +1,44 @@
-// app/referenzen/[slug]/page.tsx
+// apps/web/src/app/(site)/referenzen/[slug]/page.tsx
+import type { Metadata } from "next";
 import { notFound } from "next/navigation";
-import { referenceProjects } from "@/lib/data/references";
+
+// Data layer (Mock heute, Payload später)
+import {
+  getAllReferenceSlugs,
+  getReferenceBySlug,
+} from "@/lib/data/references";
+
+// SEO builder (hast du schon erstellt)
+import { buildReferenceMetadata } from "@/lib/seo/referencesMetadata";
+
+// Deine Detail-UI Komponente (anpassen, falls sie anders heißt)
 import { ReferenceDetail } from "@/components/referenzen/ReferenceDetail";
 
-type Props = { params: { slug: string } };
+// ISR: Seite wird statisch ausgeliefert, aber regelmäßig aktualisiert
+export const revalidate = 300; // 5 Minuten
 
-export default function Page({ params }: Props) {
-  const project = referenceProjects.find((p) => p.id === params.slug);
-  if (!project) return notFound();
+// Optional: wenn du NICHT willst, dass unbekannte slugs zur Laufzeit generiert werden
+// export const dynamicParams = false;
 
-  return <ReferenceDetail project={project} />;
+export async function generateStaticParams() {
+  const slugs = await getAllReferenceSlugs();
+  return slugs.map((slug) => ({ slug }));
+}
+
+export async function generateMetadata({
+  params,
+}: {
+  params: { slug: string };
+}): Promise<Metadata> {
+  const ref = await getReferenceBySlug(params.slug);
+  if (!ref) return { title: "Referenz nicht gefunden | Immowo Ventures" };
+
+  return buildReferenceMetadata(ref);
+}
+
+export default async function Page({ params }: { params: { slug: string } }) {
+  const ref = await getReferenceBySlug(params.slug);
+  if (!ref) notFound();
+
+  return <ReferenceDetail project={ref} />;
 }

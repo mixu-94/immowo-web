@@ -1,8 +1,4 @@
-// components/referenzen/types.ts
-export type ReferenceKPI = {
-    label: string;
-    value: string;
-};
+// lib/types/references.ts
 
 export type ReferenceCategory =
     | "Neubau"
@@ -12,36 +8,107 @@ export type ReferenceCategory =
     | "Kapitalanlage"
     | "Gewerbe";
 
-export type ReferenceProperty = {
+export type ReferenceStatus = "verkauft" | "reserviert" | "fertiggestellt" | "in bau";
+
+export type ReferenceService =
+    | "Projektentwicklung"
+    | "Bauträger"
+    | "Vermarktung"
+    | "Sanierung"
+    | "Architektur"
+    | "Innenausbau"
+    | "Finishing"
+    | "Fotografie"
+    | "Branding"
+    | "UI/Website";
+
+export type ReferenceKPI = {
+    label: string;
+    value: string;
+};
+
+export type ReferenceMediaItem =
+    | { type: "image"; src: string; alt?: string }
+    | { type: "video"; src: string; posterSrc?: string };
+
+export type ReferenceDocuments = {
+    caseStudyPdfUrl?: string; // fehlt => UI zeigt "auf Anfrage"
+    exposeSampleUrl?: string;
+    brochureUrl?: string;
+};
+
+export type ReferenceFacts = {
+    units?: string; // "6 WE"
+    livingArea?: string; // "165 m²"
+    plotArea?: string; // "520 m²"
+    rooms?: string; // "5 Zimmer"
+    buildTime?: string; // "11 Monate"
+    status?: ReferenceStatus;
+};
+
+export type ReferenceLocation = {
+    region?: string; // "Schwaben"
+    label?: string; // "Augsburg (Region)"
+    // optional diskrete Geo-Koordinate
+    geo?: { lat: number; lng: number };
+};
+
+export type ReferenceSEO = {
+    title?: string;
+    description?: string;
+    ogImage?: string;
+};
+
+export type ReferenceTimelineItem = {
+    title: string;
+    text: string;
+};
+
+export type Reference = {
     id: string;
-    title: string;            // z.B. "Modernes EFH mit Garten"
-    subtitle?: string;        // z.B. "Schlüsselfertig • KfW-Standard"
+    slug: string;
+
+    title: string;
+    subtitle?: string;
+
     category: ReferenceCategory;
+    year: string;
 
-    year: string;             // Abschlussjahr oder Verkaufsjahr
-    location: string;         // Stadt / Region (keine genaue Adresse)
+    // diskret
+    location: ReferenceLocation;
 
-    description: string;      // 2-3 Sätze, Story/Outcome
+    description: string;
+    highlights: string[];
 
-    highlights: string[];     // kurze Bullet-Badges (z.B. "KfW 40", "Massivbau", "Bauzeit 11 Monate")
+    facts?: ReferenceFacts;
+    kpis?: ReferenceKPI[];
 
-    facts?: {
-        units?: string;         // z.B. "6 WE"
-        livingArea?: string;    // z.B. "165 m²"
-        plotArea?: string;      // z.B. "520 m²"
-        rooms?: string;         // z.B. "5 Zimmer"
-        buildTime?: string;     // z.B. "11 Monate"
-        status?: "verkauft" | "reserviert" | "fertiggestellt" | "in bau";
+    coverImage?: { src: string; alt: string };
+
+    // für Detailseite
+    media?: {
+        gallery?: ReferenceMediaItem[];
     };
 
-    coverImage?: {
-        src: string;
-        alt: string;
-    };
+    documents?: ReferenceDocuments;
 
-    // Optional: wenn ihr Detailseiten baut (später)
-    links?: {
-        label: string;
-        href: string;
-    }[];
+    services?: ReferenceService[];
+    timeline?: ReferenceTimelineItem[];
+
+    // flags
+    isFeatured?: boolean;
+    sortOrder?: number;
+
+    // SEO
+    seo?: ReferenceSEO;
+};
+
+export type ReferenceRow = {
+    id: string;
+    title: string;
+    href?: string;
+    items: Pick<
+        Reference,
+        "id" | "slug" | "title" | "subtitle" | "category" | "year" | "location" | "coverImage" | "isFeatured"
+    >[];
 };

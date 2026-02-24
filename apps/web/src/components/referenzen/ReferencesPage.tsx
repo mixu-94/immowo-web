@@ -2,12 +2,15 @@
 import { ReferencesShell } from "./ReferencesShell";
 import { ReferencesHeader } from "./ReferencesHeader";
 import { ReferencesExplorer } from "./ReferencesExplorer";
-import { referenceProjects } from "@/lib/data/references";
-export function ReferencesPage() {
+import { getReferences } from "@/lib/data/references";
+
+export async function ReferencesPage() {
+  const projects = await getReferences();
+
   return (
     <ReferencesShell>
       <ReferencesHeader />
-      <ReferencesExplorer projects={referenceProjects} />
+      <ReferencesExplorer projects={projects} />
     </ReferencesShell>
   );
 }

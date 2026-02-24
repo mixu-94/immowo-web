@@ -1,8 +1,24 @@
-import type { ReferenceProperty } from "../../lib/types/references";
 import { ReferenceCard } from "./ReferencesCard";
 
+type LocationLike = string | { label?: string; region?: string } | undefined;
+
+type ReferenceLike = {
+  id: string;
+  title: string;
+  slug: string;
+  subtitle?: string;
+  category: string;
+  year: string;
+  description: string;
+  highlights: string[];
+  location?: LocationLike;
+  facts?: any;
+  coverImage?: { src: string; alt: string };
+  links?: { label: string; href: string }[];
+};
+
 type Props = {
-  projects: ReferenceProperty[];
+  projects: ReferenceLike[];
 };
 
 export function ReferencesGrid({ projects }: Props) {

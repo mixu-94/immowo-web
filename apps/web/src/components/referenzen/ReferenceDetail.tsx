@@ -1,12 +1,21 @@
 // components/referenzen/ReferenceDetail.tsx
 import Image from "next/image";
 import Link from "next/link";
-import type { ReferenceProperty } from "../../lib/types/references";
 import { ReferencesShell } from "./ReferencesShell";
 
-type Props = { project: ReferenceProperty };
+// ✅ nutze euren zentralen Type
+import type { Reference } from "@/lib/types/references";
+
+type Props = { project: Reference };
+
+function formatLocation(loc: Reference["location"]) {
+  // loc ist bei euch ein Objekt { region?, label?, geo? }
+  return loc?.label ?? loc?.region ?? "";
+}
 
 export function ReferenceDetail({ project }: Props) {
+  const loc = formatLocation(project.location);
+
   return (
     <ReferencesShell>
       <div className="mb-6">
@@ -36,12 +45,22 @@ export function ReferenceDetail({ project }: Props) {
           <div className="absolute inset-0 bg-gradient-to-t from-black/65 via-black/20 to-transparent" />
 
           <div className="absolute bottom-0 left-0 right-0 p-6 md:p-8">
-            <div className="inline-flex items-center gap-2 rounded-full border border-white/15 bg-white/10 px-3 py-1 text-xs text-white/80">
-              {project.category} • {project.year} • {project.location}
+            <div className="inline-flex flex-wrap items-center gap-2 rounded-full border border-white/15 bg-white/10 px-3 py-1 text-xs text-white/80">
+              <span>{project.category}</span>
+              <span>•</span>
+              <span>{project.year}</span>
+              {loc ? (
+                <>
+                  <span>•</span>
+                  <span>{loc}</span>
+                </>
+              ) : null}
             </div>
+
             <h1 className="mt-3 text-balance text-2xl font-semibold text-white md:text-4xl">
               {project.title}
             </h1>
+
             {project.subtitle ? (
               <p className="mt-2 max-w-3xl text-sm text-white/75 md:text-base">
                 {project.subtitle}

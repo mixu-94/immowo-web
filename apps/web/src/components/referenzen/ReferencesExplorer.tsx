@@ -1,21 +1,49 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import type { ReferenceProperty } from "../../lib/types/references";
 import { ReferencesToolbar } from "./ReferencesToolbar";
 import { ReferencesGrid } from "./ReferencesGrid";
 
-type Props = {
-  projects: ReferenceProperty[];
+type LocationLike = string | { label?: string; region?: string } | undefined;
+
+type ReferenceLike = {
+  id: string;
+  title: string;
+  subtitle?: string;
+  category: string;
+  year: string;
+  description: string;
+  highlights: string[];
+  location?: LocationLike;
+  facts?: {
+    units?: string;
+    livingArea?: string;
+    plotArea?: string;
+    rooms?: string;
+    buildTime?: string;
+    status?: string;
+  };
+  coverImage?: { src: string; alt: string };
+  links?: { label: string; href: string }[];
 };
 
-export function ReferencesExplorer({ projects }: Props) {
+type Props = {
+  projects?: ReferenceLike[];
+};
+
+function formatLocation(loc: LocationLike) {
+  if (!loc) return "";
+  if (typeof loc === "string") return loc;
+  return loc.label ?? loc.region ?? "";
+}
+
+export function ReferencesExplorer({ projects = [] }: Props) {
   const [query, setQuery] = useState("");
   const [activeCategory, setActiveCategory] = useState<string | null>(null);
 
   const categories = useMemo(() => {
     const set = new Set<string>();
-    projects.forEach((p) => set.add(p.category));
+    projects.forEach((p) => p?.category && set.add(p.category));
     return Array.from(set).sort((a, b) => a.localeCompare(b));
   }, [projects]);
 
@@ -30,11 +58,11 @@ export function ReferencesExplorer({ projects }: Props) {
       const haystack = [
         p.title,
         p.subtitle ?? "",
-        p.location ?? "",
-        p.year,
         p.category,
+        p.year,
+        formatLocation(p.location),
         p.description,
-        p.highlights.join(" "),
+        (p.highlights ?? []).join(" "),
         p.facts?.units ?? "",
         p.facts?.livingArea ?? "",
         p.facts?.plotArea ?? "",
@@ -45,14 +73,13 @@ export function ReferencesExplorer({ projects }: Props) {
         .join(" ")
         .toLowerCase();
 
-      const matchesQuery = q.length ? haystack.includes(q) : true;
+      const matchesQuery = q ? haystack.includes(q) : true;
       return matchesCategory && matchesQuery;
     });
   }, [projects, query, activeCategory]);
 
   return (
     <section>
-      {/* Toolbar kann bleiben – wir füttern ihn einfach mit Kategorien statt Tags */}
       <ReferencesToolbar
         tags={categories}
         query={query}

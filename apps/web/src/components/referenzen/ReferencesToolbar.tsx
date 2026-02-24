@@ -1,4 +1,3 @@
-// components/referenzen/ReferencesToolbar.tsx
 "use client";
 
 type Props = {
@@ -25,7 +24,7 @@ export function ReferencesToolbar({
           <input
             value={query}
             onChange={(e) => onQueryChange(e.target.value)}
-            placeholder="Suche nach Projekt, Tech, Kunde…"
+            placeholder="Suche nach Projekt, Kategorie, Region, Highlights…"
             className="w-full rounded-2xl border border-white/10 bg-white/5 px-4 py-3 text-sm text-white placeholder:text-white/40 outline-none backdrop-blur transition focus:border-white/20 md:w-[420px]"
           />
           <div className="pointer-events-none absolute inset-y-0 right-3 flex items-center text-white/35">
@@ -34,7 +33,7 @@ export function ReferencesToolbar({
         </div>
 
         <div className="text-sm text-white/60">
-          {resultCount} {resultCount === 1 ? "Projekt" : "Projekte"}
+          {resultCount} {resultCount === 1 ? "Referenz" : "Referenzen"}
         </div>
       </div>
 
