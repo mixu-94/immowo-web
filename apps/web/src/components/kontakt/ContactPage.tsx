@@ -13,8 +13,9 @@ export function ContactPage() {
 
       <section className="mt-10 grid gap-6 lg:grid-cols-[0.9fr_1.1fr] lg:items-start ">
         <ContactPeople />
-
-        <ContactForm />
+        <div id="formular">
+          <ContactForm />
+        </div>
       </section>
 
       <ContactTrust />

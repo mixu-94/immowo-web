@@ -1,6 +1,6 @@
 import CategoryRow from "./CategoryRow";
 import { CategoryRow as CategoryRowType } from "@/lib/types/listings";
-import { listings as fallbackRows } from "@/lib/data/listings";
+import { categoryRows as fallbackRows } from "@/lib/data/listings";
 
 type Props = {
   rows?: CategoryRowType[]; // later: pass CMS rows

@@ -2,6 +2,8 @@ import type { Metadata } from "next";
 import "@/styles/globals.css";
 import { ConsentProvider } from "@/components/consent/ConsentProvider";
 import CookieBanner from "@/components/consent/CookieBanner";
+import { Navbar } from "@/components/base/nav/Navbar";
+import Footer from "@/components/base/footer/Footer";
 
 export const metadata: Metadata = {
   title: "Create Next App",
@@ -17,7 +19,9 @@ export default function RootLayout({
     <html lang="en" className="">
       <ConsentProvider>
         <CookieBanner />
+        <Navbar />
         <body className={`$ antialiased mt-14 bg-[#050B1A] `}>{children}</body>
+        <Footer />
       </ConsentProvider>
     </html>
   );

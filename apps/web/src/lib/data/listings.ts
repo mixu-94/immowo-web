@@ -137,9 +137,17 @@ const rawRows: CategoryRow[] = [
     },
 ];
 
-export const listings: CategoryRow[] = withRouting(rawRows);
+export const categoryRows: CategoryRow[] = withRouting(rawRows);
 
-export const getListings = async (): Promise<CategoryRow[]> => listings;
+/** Für Startseite/Carousels */
+export async function getCategoryRows(): Promise<CategoryRow[]> {
+    return categoryRows;
+}
+
+/** Für /immobilien (flache Liste) */
+export async function getListings(): Promise<Listing[]> {
+    return categoryRows.flatMap((r) => r.items);
+}
 
 /**
  * ✅ DETAIL DATA (used for /objekte/[slug])
@@ -423,7 +431,7 @@ export async function getAllEstates(): Promise<Listing[]> {
 }
 
 export async function getEstateBySlug(slug: string): Promise<EstateDetails | null> {
-    const all = await getAllEstates();
+    const all = await getListings();
     const base = all.find((x) => x.slug === slug);
     if (!base) return null;
 

@@ -10,8 +10,8 @@ type NavbarProps = {};
 
 const navItems = [
   { label: "Home", href: "/", disabled: false, hidden: false },
-  // { label: "Immobilien", href: "/immobilien", disabled: false, hidden: false },
-  // { label: "Referenzen", href: "/referenzen", disabled: false, hidden: false },
+  { label: "Immobilien", href: "/immobilien", disabled: false, hidden: false },
+  { label: "Referenzen", href: "/referenzen", disabled: false, hidden: false },
   {
     label: "Unternehmen",
     href: "/unternehmen",
