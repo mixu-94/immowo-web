@@ -5,6 +5,7 @@ import { ContactPeople } from "./ContactPeople";
 import { ContactForm } from "./ContactForm";
 import { ContactTrust } from "./ContactTrust";
 import { ScrollToFormOnListing } from "../ui/ScrollToForm";
+import { Suspense } from "react";
 
 export function ContactPage() {
   return (
@@ -13,9 +14,11 @@ export function ContactPage() {
 
       <section className="mt-10 grid gap-6 lg:grid-cols-[0.9fr_1.1fr] lg:items-start ">
         <ContactPeople />
-        <div id="formular">
-          <ContactForm />
-        </div>
+        <Suspense>
+          <div id="formular">
+            <ContactForm />
+          </div>
+        </Suspense>
       </section>
 
       <ContactTrust />

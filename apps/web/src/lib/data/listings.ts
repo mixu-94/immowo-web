@@ -3,6 +3,21 @@ import type { CategoryRow, Listing, EstateDetails } from "@/lib/types/listings";
 
 const ESTATE_BASE_PATH = "/objekte";
 
+/**
+ * ----------------------------------------------------------------------------
+ * BEST PRACTICE SETUP (Payload-ready)
+ * ----------------------------------------------------------------------------
+ * ✅ Single Source of Truth: `estates`
+ * ✅ Categories are DERIVED from estates (no duplicate item data)
+ * ✅ Details can still be enriched per listing (already part of each object)
+ *
+ * Later with Payload:
+ * - estates[] becomes a fetch from Payload collection `listings`
+ * - categories could be a field on each listing: `categoryIds`
+ * - or a separate collection `listingCategories`
+ * ----------------------------------------------------------------------------
+ */
+
 function slugify(input: string) {
     return input
         .toLowerCase()
@@ -19,171 +34,92 @@ export function makeListingSlug(title: string, id: string) {
     return `${slugify(title)}-${slugify(id)}`;
 }
 
-function withRouting(rows: CategoryRow[]): CategoryRow[] {
-    return rows.map((row) => ({
-        ...row,
-        items: row.items.map((item) => {
-            const slug = makeListingSlug(item.title, item.id);
-            return {
-                ...item,
-                slug,
-                href: `${ESTATE_BASE_PATH}/${slug}`,
-            };
-        }),
-    }));
-}
+type ListingVariant = "ready" | "build" | "investment";
+type ListingStatus = "verfügbar" | "reserviert" | "verkauft" | "in_bau";
 
 /**
- * ✅ ROW DATA (used for carousels/overview)
- * Keep it minimal = fast + clean.
+ * IMPORTANT:
+ * Listing/EstateDetails types in your project might not include all fields below yet.
+ * If TS complains, extend your types in `lib/types/listings.ts` later (Payload will need them anyway).
  */
-const rawRows: CategoryRow[] = [
-    {
-        id: "new",
-        title: "NEU",
-        href: "/neu",
-        items: [
-            {
-                id: "re1",
-                title: "Moderne Villa mit Seeblick",
-                imageSrc: "/assets/images/real-estate/realestate1.jpg",
-                href: "",
-                location: "Bayern",
-                badge: "NEU",
-            },
-            {
-                id: "re2",
-                title: "Luxus Penthouse im Grünen",
-                imageSrc: "/assets/images/real-estate/realestate2.jpg",
-                href: "",
-                location: "Starnberg",
-                badge: "SECRET SALE",
-            },
-            {
-                id: "re3",
-                title: "Baugrundstück mit Panorama",
-                imageSrc: "/assets/images/real-estate/realestate3.jpg",
-                href: "",
-                location: "Allgäu",
-                badge: "NEU",
-            },
-            {
-                id: "re4",
-                title: "Design Haus mit Pool",
-                imageSrc: "/assets/images/real-estate/realestate4.jpg",
-                href: "",
-                location: "München Umland",
-            },
-            {
-                id: "re5",
-                title: "Architektenhaus in Hanglage",
-                imageSrc: "/assets/images/real-estate/realestate5.jpg",
-                href: "",
-                location: "Bodensee",
-                badge: "NEU",
-            },
-        ],
-    },
-    {
-        id: "most",
-        title: "MEISTGESEHEN",
-        href: "/meistgesehen",
-        items: [
-            {
-                id: "re6",
-                title: "Landhaus mit Privatsee",
-                imageSrc: "/assets/images/real-estate/realestate6.jpg",
-                href: "",
-                location: "Tirol",
-            },
-            {
-                id: "re7",
-                title: "Luxus Anwesen mit Park",
-                imageSrc: "/assets/images/real-estate/realestate7.jpg",
-                href: "",
-                location: "Salzburg",
-                badge: "SECRET SALE",
-            },
-            {
-                id: "re8",
-                title: "Modernes Chalet in Alpenlage",
-                imageSrc: "/assets/images/real-estate/realestate8.jpg",
-                href: "",
-                location: "Zugspitze Region",
-            },
-            {
-                id: "re9",
-                title: "Villa mit Infinity Pool",
-                imageSrc: "/assets/images/real-estate/realestate9.jpg",
-                href: "",
-                location: "Gardasee",
-                badge: "VERKAUFT",
-            },
-            {
-                id: "re10",
-                title: "Waldresidenz mit Privatsphäre",
-                imageSrc: "/assets/images/real-estate/realestate10.jpg",
-                href: "",
-                location: "Schwarzwald",
-            },
-            {
-                id: "re11",
-                title: "Seegrundstück mit Steg",
-                imageSrc: "/assets/images/real-estate/realestate11.jpg",
-                href: "",
-                location: "Chiemsee",
-            },
-        ],
-    },
-];
+type ListingFull = Listing &
+    EstateDetails & {
+        // ✅ filters/UX
+        variant: ListingVariant;
+        status: ListingStatus;
 
-export const categoryRows: CategoryRow[] = withRouting(rawRows);
+        // ✅ region/label (no exact address)
+        region: string; // e.g. "Schwaben", "Allgäu"
+        locationLabel: string; // e.g. "Krumbach (Umgebung)"
 
-/** Für Startseite/Carousels */
-export async function getCategoryRows(): Promise<CategoryRow[]> {
-    return categoryRows;
-}
+        // ✅ documents (if missing => "auf Anfrage")
+        pdfUrl?: string; // Exposé
+        floorplanUrl?: string;
+        energyCertificateUrl?: string;
 
-/** Für /immobilien (flache Liste) */
-export async function getListings(): Promise<Listing[]> {
-    return categoryRows.flatMap((r) => r.items);
-}
+        // ✅ energy details (GEG fields)
+        energyCertificateType?: "bedarf" | "verbrauch";
+        energyValue?: number; // kWh/(m²a)
+        energyCarrier?: string; // e.g. "Wärmepumpe", "Gas"
+        energyYear?: number; // year from energy certificate (often same as yearBuilt)
+
+        // ✅ categorization (single source -> category rows derived)
+        categoryIds: string[];
+    };
 
 /**
- * ✅ DETAIL DATA (used for /objekte/[slug])
- * Map by listing id so you can keep row data lightweight.
+ * ----------------------------------------------------------------------------
+ * ✅ CENTRAL ESTATE DATA
+ * ----------------------------------------------------------------------------
+ * These are "dummy but production-like" records.
+ * Try to keep these fields as close as possible to what Payload will store later.
  */
-const estateDetailsById: Record<string, Omit<EstateDetails, keyof Listing>> = {
-    re1: {
+const estates: ListingFull[] = [
+    {
+        id: "re1",
+        title: "Moderne Villa mit Seeblick",
+        imageSrc: "/assets/images/real-estate/realestate1.jpg",
+        location: "Bayern",
+        badge: "NEU",
+        href: "",
+        slug: "",
+
+        // payload-ready fields
+        variant: "ready",
+        status: "verfügbar",
+        region: "Bayern",
+        locationLabel: "Bayern (Seenähe)",
+        categoryIds: ["new", "most"],
+
         price: 3950000,
-        geo: { lat: 48.2439, lng: 10.3626 }, // Dummy
         currency: "EUR",
+        geo: { lat: 48.2439, lng: 10.3626 }, // Dummy
         livingArea: 320,
         plotArea: 980,
         rooms: 7,
         bedrooms: 4,
         bathrooms: 3,
         yearBuilt: 2021,
+
+        // energy (GEG-relevant)
         energyClass: "A",
         heatingType: "Wärmepumpe",
+        energyCertificateType: "bedarf",
+        energyValue: 42,
+        energyCarrier: "Wärmepumpe",
+        energyYear: 2021,
+
         commissionText: "3,57% inkl. MwSt. Käuferprovision",
         availability: "Nach Absprache",
+
+        // docs (if missing -> UI shows 'auf Anfrage')
+        pdfUrl: "/assets/pdfs/expose-demo.pdf",
+        floorplanUrl: "/assets/pdfs/floorplan-demo.pdf",
+
         description:
             "Eine moderne Villa mit großzügigen Glasfronten, ruhiger Lage und beeindruckendem Blick auf den See. Hochwertige Materialien, klare Linien und ein durchdachtes Raumkonzept schaffen ein exklusives Wohngefühl.",
-        highlights: [
-            "Panoramablick auf den See",
-            "Großzügige Südterrasse",
-            "Smart-Home Vorbereitung",
-            "Garage + Stellplätze",
-        ],
-        features: [
-            "Fußbodenheizung",
-            "Echtholzparkett",
-            "Designer-Küche",
-            "Weinklimaschrank",
-            "Einbauschränke",
-            "Alarmanlage vorbereitet",
-        ],
+        highlights: ["Panoramablick auf den See", "Großzügige Südterrasse", "Smart-Home Vorbereitung", "Garage + Stellplätze"],
+        features: ["Fußbodenheizung", "Echtholzparkett", "Designer-Küche", "Weinklimaschrank", "Einbauschränke", "Smart Home vorbereitet"],
         gallery: [
             "/assets/images/real-estate/realestate2.jpg",
             "/assets/images/real-estate/realestate3.jpg",
@@ -192,249 +128,904 @@ const estateDetailsById: Record<string, Omit<EstateDetails, keyof Listing>> = {
         ],
     },
 
-    re2: {
+    {
+        id: "re2",
+        title: "Luxus Penthouse im Grünen",
+        imageSrc: "/assets/images/real-estate/realestate2.jpg",
+        location: "Starnberg",
+        badge: "SECRET SALE",
+        href: "",
+        slug: "",
+
+        variant: "investment",
+        status: "reserviert",
+        region: "Oberbayern",
+        locationLabel: "Starnberg (Region)",
+        categoryIds: ["new", "most"],
+
         price: 2450000,
-        geo: { lat: 48.2439, lng: 10.3626 }, // Dummy
         currency: "EUR",
+        geo: { lat: 48.2439, lng: 10.3626 }, // Dummy
         livingArea: 185,
         rooms: 4,
         bedrooms: 2,
         bathrooms: 2,
         yearBuilt: 2019,
-        energyClass: "A+",
+
+        energyClass: "B",
         heatingType: "Fernwärme",
-        commissionText: "3,57% inkl. MwSt. Käuferprovision",
-        availability: "Sofort verfügbar",
-        description:
-            "Ein zurückgezogenes Penthouse mit Privatsphäre, Dachterrasse und lichtdurchfluteten Wohnbereichen. Ideal für diskrete Käufer, die hochwertige Architektur und Naturanbindung kombinieren möchten.",
-        highlights: ["Private Dachterrasse", "Aufzug direkt in die Wohnung", "2 TG-Stellplätze"],
-        features: ["Kamin", "Klimatisierung", "Gäste-WC", "Smart Lighting"],
-        gallery: [
-            "/assets/images/real-estate/realestate6.jpg",
-            "/assets/images/real-estate/realestate7.jpg",
-            "/assets/images/real-estate/realestate8.jpg",
-        ],
-        // videoSrc: "/assets/videos/penthouse.mp4",
-    },
+        energyCertificateType: "verbrauch",
+        energyValue: 78,
+        energyCarrier: "Fernwärme",
+        energyYear: 2019,
 
-    re3: {
-        price: 890000,
-        geo: { lat: 48.2439, lng: 10.3626 }, // Dummy
-        currency: "EUR",
-        plotArea: 1620,
-        commissionText: "3,57% inkl. MwSt. Käuferprovision",
         availability: "Nach Absprache",
+        commissionText: "3,57% inkl. MwSt. Käuferprovision",
+
+        // docs intentionally missing -> UI will show "auf Anfrage"
         description:
-            "Großzügiges Grundstück mit Weitblick in begehrter Höhenlage. Ideale Voraussetzungen für ein modernes Einfamilienhaus oder ein anspruchsvolles Chalet-Konzept (vorbehaltlich Genehmigung).",
-        highlights: ["Panoramablick", "Ruhige Lage", "Sehr gute Anbindung"],
-        features: ["Süd-West Ausrichtung", "Anliegerstraße", "Erschließung in der Nähe"],
-        gallery: [
-            "/assets/images/real-estate/realestate9.jpg",
-            "/assets/images/real-estate/realestate10.jpg",
-        ],
+            "Exklusives Penthouse mit weitläufiger Terrasse, hochwertiger Ausstattung und unverbaubarem Grünblick. Ideal als Kapitalanlage oder Eigennutzung.",
+        highlights: ["Große Dachterrasse", "Aufzug bis in die Wohnung", "2 Stellplätze", "Hochwertige Ausstattung"],
+        features: ["Klimatisierung", "Fußbodenheizung", "Naturstein", "Einbauküche", "Smart Home"],
+        gallery: ["/assets/images/real-estate/realestate6.jpg", "/assets/images/real-estate/realestate7.jpg"],
     },
 
-    re4: {
-        price: 2790000,
-        geo: { lat: 48.2439, lng: 10.3626 }, // Dummy
+    {
+        id: "re3",
+        title: "Baugrundstück mit Panorama",
+        imageSrc: "/assets/images/real-estate/realestate3.jpg",
+        location: "Allgäu",
+        badge: "NEU",
+        href: "",
+        slug: "",
+
+        variant: "build",
+        status: "in_bau",
+        region: "Allgäu",
+        locationLabel: "Allgäu (Panoramalage)",
+        categoryIds: ["new"],
+
+        price: 690000,
         currency: "EUR",
-        livingArea: 265,
-        plotArea: 740,
+        plotArea: 1200,
+        rooms: 0,
+        bedrooms: 0,
+        bathrooms: 0,
+        yearBuilt: 0,
+
+        // energy not available for land / project yet
+        commissionText: "3,57% inkl. MwSt. Käuferprovision",
+        availability: "Kurzfristig",
+
+        // docs (project bundle later)
+        // pdfUrl intentionally missing -> 'auf Anfrage'
+        description:
+            "Attraktives Baugrundstück in Panorama-Lage. Ideal für ein Neubauprojekt vom Papier weg. Unterlagen, Visuals und Projektkonzept erhalten Sie auf Anfrage.",
+        highlights: ["Panoramaaussicht", "Ruhige Lage", "Gute Anbindung", "Projektfähig"],
+        features: ["Hanglage möglich", "Erschließung nach Absprache"],
+        gallery: ["/assets/images/real-estate/realestate4.jpg", "/assets/images/real-estate/realestate5.jpg"],
+    },
+
+    {
+        id: "re4",
+        title: "Design Haus mit Pool",
+        imageSrc: "/assets/images/real-estate/realestate4.jpg",
+        location: "München Umland",
+        href: "",
+        slug: "",
+
+        variant: "ready",
+        status: "verfügbar",
+        region: "Oberbayern",
+        locationLabel: "München (Umland)",
+        categoryIds: ["new"],
+
+        price: 3190000,
+        currency: "EUR",
+        livingArea: 260,
+        plotArea: 780,
         rooms: 6,
-        bedrooms: 4,
+        bedrooms: 3,
         bathrooms: 3,
         yearBuilt: 2020,
-        energyClass: "A",
+        energyClass: "A+",
         heatingType: "Wärmepumpe",
-        commissionText: "3,57% inkl. MwSt. Käuferprovision",
+        energyCertificateType: "bedarf",
+        energyValue: 35,
+        energyCarrier: "Wärmepumpe",
+        energyYear: 2020,
+
         availability: "Nach Absprache",
         description:
-            "Puristische Architektur mit klaren Linien, großformatigen Glasflächen und privatem Außenbereich. Der beheizte Pool und die hochwertige Ausstattung machen dieses Objekt zu einem ganzjährigen Rückzugsort.",
-        highlights: ["Beheizter Pool", "Offene Galerie", "Private Lounge-Terrasse"],
-        features: ["Naturstein", "Einbauküche", "Home Office", "Elektrische Verschattung"],
-        gallery: [
-            "/assets/images/real-estate/realestate1.jpg",
-            "/assets/images/real-estate/realestate5.jpg",
-            "/assets/images/real-estate/realestate8.jpg",
-        ],
+            "Modernes Designhaus mit Pool, klarer Architektur und großzügigem Outdoor-Bereich. Hochwertige Materialien und durchdachte Details.",
+        highlights: ["Pool", "Große Fensterfronten", "Offenes Wohnen", "Garten-Design"],
+        features: ["Fußbodenheizung", "Smart Home", "High-End Küche", "Alarmanlage"],
+        gallery: ["/assets/images/real-estate/realestate8.jpg", "/assets/images/real-estate/realestate9.jpg"],
     },
 
-    re5: {
-        price: 3180000,
-        currency: "EUR",
-        livingArea: 290,
-        plotArea: 910,
-        rooms: 7,
-        bedrooms: 4,
-        bathrooms: 3,
-        yearBuilt: 2017,
-        energyClass: "A",
-        heatingType: "Pellet + Solarthermie",
-        commissionText: "3,57% inkl. MwSt. Käuferprovision",
-        availability: "Nach Absprache",
-        description:
-            "Architektonisches Statement in Hanglage mit Terrassierung und beeindruckender Lichtführung. Ein Zuhause, das Design und Alltagstauglichkeit auf höchstem Niveau verbindet.",
-        highlights: ["Hanglage mit Terrassen", "Weitblick", "Doppelgarage"],
-        features: ["Sauna", "Fitnessraum", "Hauswirtschaftsraum", "Outdoor-Küche"],
-        gallery: [
-            "/assets/images/real-estate/realestate2.jpg",
-            "/assets/images/real-estate/realestate7.jpg",
-            "/assets/images/real-estate/realestate11.jpg",
-        ],
-    },
+    {
+        id: "re5",
+        title: "Architektenhaus in Hanglage",
+        imageSrc: "/assets/images/real-estate/realestate5.jpg",
+        location: "Bodensee",
+        badge: "NEU",
+        href: "",
+        slug: "",
 
-    re6: {
-        price: 4650000,
-        geo: { lat: 48.2439, lng: 10.3626 }, // Dummy
-        currency: "EUR",
-        livingArea: 410,
-        plotArea: 5200,
-        rooms: 10,
-        bedrooms: 6,
-        bathrooms: 5,
-        yearBuilt: 2012,
-        energyClass: "B",
-        heatingType: "Biomasse",
-        commissionText: "3,57% inkl. MwSt. Käuferprovision",
-        availability: "Nach Absprache",
-        description:
-            "Ein außergewöhnliches Landhaus mit eigenem Privatsee und weitläufigem Park. Absolute Privatsphäre, repräsentative Räume und ein unvergleichliches Naturerlebnis.",
-        highlights: ["Privatsee", "Parkähnliches Grundstück", "Gästehaus"],
-        features: ["Bootssteg", "Weinkeller", "Kaminlounge", "Security-System"],
-        gallery: [
-            "/assets/images/real-estate/realestate7.jpg",
-            "/assets/images/real-estate/realestate8.jpg",
-            "/assets/images/real-estate/realestate9.jpg",
-        ],
-    },
+        variant: "ready",
+        status: "verfügbar",
+        region: "Bodensee",
+        locationLabel: "Bodensee (Region)",
+        categoryIds: ["new"],
 
-    re7: {
-        price: 8900000,
-        geo: { lat: 48.2439, lng: 10.3626 }, // Dummy
+        price: 2790000,
         currency: "EUR",
-        livingArea: 720,
-        plotArea: 11000,
-        rooms: 14,
-        bedrooms: 8,
-        bathrooms: 7,
-        yearBuilt: 2008,
-        energyClass: "B",
-        heatingType: "Gas + Solar",
-        commissionText: "3,57% inkl. MwSt. Käuferprovision",
-        availability: "Diskret / nach Vereinbarung",
-        description:
-            "Repräsentatives Anwesen mit Park, Blickachsen und hochwertigen Details. Ideal für Käufer, die Diskretion und außergewöhnliche Qualität in bester Lage suchen.",
-        highlights: ["Parkanlage", "Indoor Spa", "Gäste-Trakt"],
-        features: ["Indoor-Pool", "Spa & Sauna", "Aufzug", "Personalwohnung", "Weinkeller"],
-        gallery: [
-            "/assets/images/real-estate/realestate10.jpg",
-            "/assets/images/real-estate/realestate11.jpg",
-            "/assets/images/real-estate/realestate6.jpg",
-        ],
-    },
-
-    re8: {
-        price: 3290000,
-        geo: { lat: 48.2439, lng: 10.3626 }, // Dummy
-        currency: "EUR",
-        livingArea: 240,
-        plotArea: 620,
-        rooms: 6,
-        bedrooms: 4,
-        bathrooms: 3,
+        livingArea: 210,
+        plotArea: 640,
+        rooms: 5,
+        bedrooms: 3,
+        bathrooms: 2,
         yearBuilt: 2018,
-        energyClass: "A",
-        heatingType: "Wärmepumpe",
-        commissionText: "3,57% inkl. MwSt. Käuferprovision",
-        availability: "Saison 2026 verfügbar",
+
+        energyClass: "B",
+        heatingType: "Gas",
+        energyCertificateType: "verbrauch",
+        energyValue: 92,
+        energyCarrier: "Gas",
+        energyYear: 2018,
+
+        availability: "Nach Absprache",
         description:
-            "Modernes Chalet mit alpinem Charakter: warme Materialien, großzügige Sichtachsen und perfekte Balance aus Design und Gemütlichkeit.",
-        highlights: ["Bergblick", "Offener Kamin", "Ski-Room"],
-        features: ["Sauna", "Kamin", "Ski-/Bike-Room", "Panorama-Terrasse", "E-Ladestation"],
-        gallery: [
-            "/assets/images/real-estate/realestate9.jpg",
-            "/assets/images/real-estate/realestate4.jpg",
-            "/assets/images/real-estate/realestate2.jpg",
-        ],
+            "Architektenhaus in Hanglage mit viel Licht, Blickachsen und hochwertigem Ausbau. Ideal für anspruchsvolle Käufer.",
+        highlights: ["Hanglage", "Großzügige Terrasse", "Designer-Details", "Ruhige Lage"],
+        features: ["Kamin", "Einbauküche", "Parkett", "Gäste-WC"],
+        gallery: ["/assets/images/real-estate/realestate10.jpg", "/assets/images/real-estate/realestate11.jpg"],
     },
 
-    re9: {
-        price: 0,
+    {
+        id: "re6",
+        title: "Landhaus mit Privatsee",
+        imageSrc: "/assets/images/real-estate/realestate6.jpg",
+        location: "Tirol",
+        href: "",
+        slug: "",
+
+        variant: "investment",
+        status: "verfügbar",
+        region: "Tirol",
+        locationLabel: "Tirol (Seenähe)",
+        categoryIds: ["most"],
+
+        price: 4990000,
         currency: "EUR",
-        geo: { lat: 48.2439, lng: 10.3626 }, // Dummy
         livingArea: 360,
-        plotArea: 1200,
-        rooms: 8,
+        plotArea: 4200,
+        rooms: 9,
         bedrooms: 5,
         bathrooms: 4,
         yearBuilt: 2016,
+
+        energyClass: "C",
+        heatingType: "Pellet",
+        energyCertificateType: "verbrauch",
+        energyValue: 118,
+        energyCarrier: "Pellet",
+        energyYear: 2016,
+
+        availability: "Nach Absprache",
+        description:
+            "Exklusives Landhaus mit Privatsee und Parkfläche. Diskrete Vermarktung.",
+        highlights: ["Privatsee", "Großes Grundstück", "Privatsphäre", "Repräsentativ"],
+        features: ["Sauna", "Kamin", "Weinkeller", "Garage"],
+        gallery: ["/assets/images/real-estate/realestate1.jpg", "/assets/images/real-estate/realestate2.jpg"],
+    },
+
+    {
+        id: "re7",
+        title: "Luxus Anwesen mit Park",
+        imageSrc: "/assets/images/real-estate/realestate7.jpg",
+        location: "Salzburg",
+        badge: "SECRET SALE",
+        href: "",
+        slug: "",
+
+        variant: "investment",
+        status: "verfügbar",
+        region: "Salzburg",
+        locationLabel: "Salzburg (Region)",
+        categoryIds: ["most"],
+
+        price: 8900000,
+        currency: "EUR",
+        livingArea: 520,
+        plotArea: 8900,
+        rooms: 12,
+        bedrooms: 6,
+        bathrooms: 5,
+        yearBuilt: 2014,
+
+        energyClass: "B",
+        heatingType: "Wärmepumpe",
+        energyCertificateType: "bedarf",
+        energyValue: 68,
+        energyCarrier: "Wärmepumpe",
+        energyYear: 2014,
+
+        availability: "Nach Absprache",
+        description:
+            "Repräsentatives Anwesen mit Parkanlage. Diskrete Vermarktung – Details und Unterlagen auf Anfrage.",
+        highlights: ["Parkanlage", "Separate Gästeeinheit", "Hohe Privatsphäre", "Luxusausstattung"],
+        features: ["Pool", "Sauna", "Fitness", "Klimatisierung"],
+        gallery: ["/assets/images/real-estate/realestate8.jpg", "/assets/images/real-estate/realestate9.jpg"],
+    },
+
+    {
+        id: "re8",
+        title: "Modernes Chalet in Alpenlage",
+        imageSrc: "/assets/images/real-estate/realestate8.jpg",
+        location: "Zugspitze Region",
+        href: "",
+        slug: "",
+
+        variant: "ready",
+        status: "verfügbar",
+        region: "Alpen",
+        locationLabel: "Zugspitze (Region)",
+        categoryIds: ["most"],
+
+        price: 3150000,
+        currency: "EUR",
+        livingArea: 240,
+        plotArea: 550,
+        rooms: 6,
+        bedrooms: 4,
+        bathrooms: 3,
+        yearBuilt: 2022,
+
         energyClass: "A",
         heatingType: "Wärmepumpe",
-        commissionText: "3,57% inkl. MwSt. Käuferprovision",
+        energyCertificateType: "bedarf",
+        energyValue: 45,
+        energyCarrier: "Wärmepumpe",
+        energyYear: 2022,
+
+        availability: "Sofort",
+        description:
+            "Modernes Chalet in traumhafter Alpenlage – hochwertiger Innenausbau, klare Linien, viel Holz und Licht.",
+        highlights: ["Alpenlage", "Große Fenster", "Sauna möglich", "Garage"],
+        features: ["Fußbodenheizung", "Naturholz", "Kamin", "Einbauküche"],
+        gallery: ["/assets/images/real-estate/realestate10.jpg", "/assets/images/real-estate/realestate11.jpg"],
+    },
+
+    {
+        id: "re9",
+        title: "Villa mit Infinity Pool",
+        imageSrc: "/assets/images/real-estate/realestate9.jpg",
+        location: "Gardasee",
+        badge: "VERKAUFT",
+        href: "",
+        slug: "",
+
+        variant: "ready",
+        status: "verkauft",
+        region: "Italien",
+        locationLabel: "Gardasee (Region)",
+        categoryIds: ["most"],
+
+        price: 0, // sold
+        currency: "EUR",
+        livingArea: 300,
+        plotArea: 900,
+        rooms: 7,
+        bedrooms: 4,
+        bathrooms: 3,
+        yearBuilt: 2020,
+
+        energyClass: "B",
+        heatingType: "Wärmepumpe",
+        energyCertificateType: "bedarf",
+        energyValue: 72,
+        energyCarrier: "Wärmepumpe",
+        energyYear: 2020,
+
         availability: "Verkauft",
         description:
-            "Exklusive Villa mit Infinity Pool und Blick auf den See. Dieses Objekt ist bereits verkauft, dient jedoch als Referenz für ähnliche Off-Market Angebote.",
-        highlights: ["Infinity Pool", "Seeblick", "Off-Market Referenz"],
-        features: ["Outdoor Lounge", "Smart Home", "Weinkeller"],
-        gallery: [
-            "/assets/images/real-estate/realestate1.jpg",
-            "/assets/images/real-estate/realestate3.jpg",
-        ],
+            "Referenz: Villa mit Infinity Pool und Seeblick – bereits verkauft.",
+        highlights: ["Infinity Pool", "Seeblick", "High-End Ausstattung", "Referenz"],
+        features: ["Pool", "Klimatisierung", "Smart Home"],
+        gallery: ["/assets/images/real-estate/realestate1.jpg", "/assets/images/real-estate/realestate2.jpg"],
     },
 
-    re10: {
-        price: 1980000,
-        geo: { lat: 48.2439, lng: 10.3626 }, // Dummy
+    {
+        id: "re10",
+        title: "Waldresidenz mit Privatsphäre",
+        imageSrc: "/assets/images/real-estate/realestate10.jpg",
+        location: "Schwarzwald",
+        href: "",
+        slug: "",
+
+        variant: "investment",
+        status: "verfügbar",
+        region: "Schwarzwald",
+        locationLabel: "Schwarzwald (Region)",
+        categoryIds: ["most"],
+
+        price: 1890000,
         currency: "EUR",
-        livingArea: 215,
-        plotArea: 4300,
+        livingArea: 210,
+        plotArea: 3200,
         rooms: 6,
-        bedrooms: 3,
+        bedrooms: 4,
         bathrooms: 2,
-        yearBuilt: 2014,
-        energyClass: "B",
-        heatingType: "Pellet",
-        commissionText: "3,57% inkl. MwSt. Käuferprovision",
+        yearBuilt: 2012,
+
+        energyClass: "D",
+        heatingType: "Öl",
+        energyCertificateType: "verbrauch",
+        energyValue: 145,
+        energyCarrier: "Öl",
+        energyYear: 2012,
+
         availability: "Nach Absprache",
         description:
-            "Rückzugsort im Grünen: Waldresidenz mit großem Grundstück, ruhiger Zufahrt und behaglicher Atmosphäre.",
-        highlights: ["Sehr ruhige Lage", "Großes Grundstück", "Home Office möglich"],
-        features: ["Kamin", "Werkstatt", "Gartenhaus", "Carport"],
-        gallery: [
-            "/assets/images/real-estate/realestate5.jpg",
-            "/assets/images/real-estate/realestate6.jpg",
-            "/assets/images/real-estate/realestate11.jpg",
-        ],
+            "Rückzugsort mit viel Privatsphäre – diskrete Lage, großzügiges Grundstück, hochwertige Modernisierung.",
+        highlights: ["Privatsphäre", "Großes Grundstück", "Modernisiert", "Ruhige Lage"],
+        features: ["Kamin", "Garage", "Gartenanlage"],
+        gallery: ["/assets/images/real-estate/realestate3.jpg", "/assets/images/real-estate/realestate4.jpg"],
     },
 
-    re11: {
-        price: 2150000,
-        geo: { lat: 48.2439, lng: 10.3626 }, // Dummy
+    {
+        id: "re11",
+        title: "Seegrundstück mit Steg",
+        imageSrc: "/assets/images/real-estate/realestate11.jpg",
+        location: "Chiemsee",
+        href: "",
+        slug: "",
+
+        variant: "build",
+        status: "verfügbar",
+        region: "Chiemsee",
+        locationLabel: "Chiemsee (Region)",
+        categoryIds: ["most"],
+
+        price: 1250000,
         currency: "EUR",
-        plotArea: 980,
-        commissionText: "3,57% inkl. MwSt. Käuferprovision",
+        plotArea: 1400,
+        rooms: 0,
+        bedrooms: 0,
+        bathrooms: 0,
+        yearBuilt: 0,
+
         availability: "Nach Absprache",
         description:
-            "Seltenes Seegrundstück mit privatem Steg. Perfekt für eine außergewöhnliche Neubauplanung (vorbehaltlich Genehmigungen).",
-        highlights: ["Privater Steg", "Direkter Seezugang", "Rarität"],
-        features: ["Süd-Ausrichtung", "Ruhige Nachbarschaft", "Gute Infrastruktur"],
-        gallery: [
-            "/assets/images/real-estate/realestate2.jpg",
-            "/assets/images/real-estate/realestate8.jpg",
-        ],
+            "Seegrundstück mit Steg – diskrete Vermarktung. Projektoptionen und Unterlagen auf Anfrage.",
+        highlights: ["Seezugang", "Steg", "Projektoption", "Diskret"],
+        features: ["Bebauung nach Absprache"],
+        gallery: ["/assets/images/real-estate/realestate5.jpg", "/assets/images/real-estate/realestate6.jpg"],
     },
-};
+];
 
-export async function getAllEstates(): Promise<Listing[]> {
-    const rows = await getListings();
-    return rows.flatMap((r) => r.items);
+/**
+ * ----------------------------------------------------------------------------
+ * ✅ ROUTING ENRICHMENT
+ * ----------------------------------------------------------------------------
+ * Adds slug + href once, based on title + id.
+ */
+function enrichRouting(items: ListingFull[]): ListingFull[] {
+    return items.map((item) => {
+        const slug = makeListingSlug(item.title, item.id);
+        return {
+            ...item,
+            slug,
+            href: `${ESTATE_BASE_PATH}/${slug}`,
+        };
+    });
 }
 
-export async function getEstateBySlug(slug: string): Promise<EstateDetails | null> {
+const estatesWithRouting = enrichRouting(estates);
+
+/**
+ * ----------------------------------------------------------------------------
+ * ✅ CATEGORIES (derived)
+ * ----------------------------------------------------------------------------
+ * Best practice: Keep categories lightweight, derive rows from listing.categoryIds
+ */
+const categories: Array<{ id: string; title: string; href: string }> = [
+    { id: "new", title: "NEU", href: "/neu" },
+    { id: "most", title: "MEISTGESEHEN", href: "/meistgesehen" },
+];
+
+function buildCategoryRows(items: ListingFull[]): CategoryRow[] {
+    return categories.map((cat) => {
+        const catItems = items
+            .filter((i) => i.categoryIds.includes(cat.id))
+            // keep carousel minimal: only base fields needed
+            .map((i) => ({
+                id: i.id,
+                title: i.title,
+                imageSrc: i.imageSrc,
+                href: i.href,
+                location: i.locationLabel || i.location,
+                badge: i.badge,
+                slug: i.slug,
+            })) as unknown as Listing[];
+
+        return {
+            id: cat.id,
+            title: cat.title,
+            href: cat.href,
+            items: catItems,
+        };
+    });
+}
+
+export const categoryRows: CategoryRow[] = buildCategoryRows(estatesWithRouting);
+
+/**
+ * ----------------------------------------------------------------------------
+ * ✅ PUBLIC API
+ * ----------------------------------------------------------------------------
+ * Use these everywhere in the app.
+ *
+ * Later with Payload:
+ * - getCategoryRows(): either build server-side grouping or query a "featured" flag
+ * - getListings(): query all listings (with filters, pagination)
+ * - getEstateBySlug(): fetch one listing by slug
+ */
+export async function getCategoryRows(): Promise<CategoryRow[]> {
+    return categoryRows;
+}
+
+export async function getListings(): Promise<ListingFull[]> {
+    // Used by /immobilien for filter + grid
+    return estatesWithRouting;
+}
+
+export async function getEstateBySlug(slug: string): Promise<ListingFull | null> {
     const all = await getListings();
-    const base = all.find((x) => x.slug === slug);
-    if (!base) return null;
-
-    const details = estateDetailsById[base.id] ?? {};
-    return { ...base, ...details };
+    return all.find((x) => x.slug === slug) ?? null;
 }
+
+
+
+
+// // src/lib/data/listings.ts
+// import type { CategoryRow, Listing, EstateDetails } from "@/lib/types/listings";
+
+// const ESTATE_BASE_PATH = "/objekte";
+
+// function slugify(input: string) {
+//     return input
+//         .toLowerCase()
+//         .trim()
+//         .replace(/[ä]/g, "ae")
+//         .replace(/[ö]/g, "oe")
+//         .replace(/[ü]/g, "ue")
+//         .replace(/[ß]/g, "ss")
+//         .replace(/[^a-z0-9]+/g, "-")
+//         .replace(/(^-|-$)+/g, "");
+// }
+
+// export function makeListingSlug(title: string, id: string) {
+//     return `${slugify(title)}-${slugify(id)}`;
+// }
+
+// function withRouting(rows: CategoryRow[]): CategoryRow[] {
+//     return rows.map((row) => ({
+//         ...row,
+//         items: row.items.map((item) => {
+//             const slug = makeListingSlug(item.title, item.id);
+//             return {
+//                 ...item,
+//                 slug,
+//                 href: `${ESTATE_BASE_PATH}/${slug}`,
+//             };
+//         }),
+//     }));
+// }
+
+// /**
+//  * ✅ ROW DATA (used for carousels/overview)
+//  * Keep it minimal = fast + clean.
+//  */
+// const rawRows: CategoryRow[] = [
+//     {
+//         id: "new",
+//         title: "NEU",
+//         href: "/neu",
+//         items: [
+//             {
+//                 id: "re1",
+//                 title: "Moderne Villa mit Seeblick",
+//                 imageSrc: "/assets/images/real-estate/realestate1.jpg",
+//                 href: "",
+//                 location: "Bayern",
+//                 badge: "NEU",
+//             },
+//             {
+//                 id: "re2",
+//                 title: "Luxus Penthouse im Grünen",
+//                 imageSrc: "/assets/images/real-estate/realestate2.jpg",
+//                 href: "",
+//                 location: "Starnberg",
+//                 badge: "SECRET SALE",
+//             },
+//             {
+//                 id: "re3",
+//                 title: "Baugrundstück mit Panorama",
+//                 imageSrc: "/assets/images/real-estate/realestate3.jpg",
+//                 href: "",
+//                 location: "Allgäu",
+//                 badge: "NEU",
+//             },
+//             {
+//                 id: "re4",
+//                 title: "Design Haus mit Pool",
+//                 imageSrc: "/assets/images/real-estate/realestate4.jpg",
+//                 href: "",
+//                 location: "München Umland",
+//             },
+//             {
+//                 id: "re5",
+//                 title: "Architektenhaus in Hanglage",
+//                 imageSrc: "/assets/images/real-estate/realestate5.jpg",
+//                 href: "",
+//                 location: "Bodensee",
+//                 badge: "NEU",
+//             },
+//         ],
+//     },
+//     {
+//         id: "most",
+//         title: "MEISTGESEHEN",
+//         href: "/meistgesehen",
+//         items: [
+//             {
+//                 id: "re6",
+//                 title: "Landhaus mit Privatsee",
+//                 imageSrc: "/assets/images/real-estate/realestate6.jpg",
+//                 href: "",
+//                 location: "Tirol",
+//             },
+//             {
+//                 id: "re7",
+//                 title: "Luxus Anwesen mit Park",
+//                 imageSrc: "/assets/images/real-estate/realestate7.jpg",
+//                 href: "",
+//                 location: "Salzburg",
+//                 badge: "SECRET SALE",
+//             },
+//             {
+//                 id: "re8",
+//                 title: "Modernes Chalet in Alpenlage",
+//                 imageSrc: "/assets/images/real-estate/realestate8.jpg",
+//                 href: "",
+//                 location: "Zugspitze Region",
+//             },
+//             {
+//                 id: "re9",
+//                 title: "Villa mit Infinity Pool",
+//                 imageSrc: "/assets/images/real-estate/realestate9.jpg",
+//                 href: "",
+//                 location: "Gardasee",
+//                 badge: "VERKAUFT",
+//             },
+//             {
+//                 id: "re10",
+//                 title: "Waldresidenz mit Privatsphäre",
+//                 imageSrc: "/assets/images/real-estate/realestate10.jpg",
+//                 href: "",
+//                 location: "Schwarzwald",
+//             },
+//             {
+//                 id: "re11",
+//                 title: "Seegrundstück mit Steg",
+//                 imageSrc: "/assets/images/real-estate/realestate11.jpg",
+//                 href: "",
+//                 location: "Chiemsee",
+//             },
+//         ],
+//     },
+// ];
+
+// export const categoryRows: CategoryRow[] = withRouting(rawRows);
+
+// /** Für Startseite/Carousels */
+// export async function getCategoryRows(): Promise<CategoryRow[]> {
+//     return categoryRows;
+// }
+
+// /** Für /immobilien (flache Liste) */
+// export async function getListings(): Promise<Listing[]> {
+//     return categoryRows.flatMap((r) => r.items);
+// }
+
+// /**
+//  * ✅ DETAIL DATA (used for /objekte/[slug])
+//  * Map by listing id so you can keep row data lightweight.
+//  */
+// const estateDetailsById: Record<string, Omit<EstateDetails, keyof Listing>> = {
+//     re1: {
+//         price: 3950000,
+//         geo: { lat: 48.2439, lng: 10.3626 }, // Dummy
+//         currency: "EUR",
+//         livingArea: 320,
+//         plotArea: 980,
+//         rooms: 7,
+//         bedrooms: 4,
+//         bathrooms: 3,
+//         yearBuilt: 2021,
+//         energyClass: "A",
+//         heatingType: "Wärmepumpe",
+//         commissionText: "3,57% inkl. MwSt. Käuferprovision",
+//         availability: "Nach Absprache",
+//         description:
+//             "Eine moderne Villa mit großzügigen Glasfronten, ruhiger Lage und beeindruckendem Blick auf den See. Hochwertige Materialien, klare Linien und ein durchdachtes Raumkonzept schaffen ein exklusives Wohngefühl.",
+//         highlights: [
+//             "Panoramablick auf den See",
+//             "Großzügige Südterrasse",
+//             "Smart-Home Vorbereitung",
+//             "Garage + Stellplätze",
+//         ],
+//         features: [
+//             "Fußbodenheizung",
+//             "Echtholzparkett",
+//             "Designer-Küche",
+//             "Weinklimaschrank",
+//             "Einbauschränke",
+//             "Alarmanlage vorbereitet",
+//         ],
+//         gallery: [
+//             "/assets/images/real-estate/realestate2.jpg",
+//             "/assets/images/real-estate/realestate3.jpg",
+//             "/assets/images/real-estate/realestate4.jpg",
+//             "/assets/images/real-estate/realestate5.jpg",
+//         ],
+//     },
+
+//     re2: {
+//         price: 2450000,
+//         geo: { lat: 48.2439, lng: 10.3626 }, // Dummy
+//         currency: "EUR",
+//         livingArea: 185,
+//         rooms: 4,
+//         bedrooms: 2,
+//         bathrooms: 2,
+//         yearBuilt: 2019,
+//         energyClass: "A+",
+//         heatingType: "Fernwärme",
+//         commissionText: "3,57% inkl. MwSt. Käuferprovision",
+//         availability: "Sofort verfügbar",
+//         description:
+//             "Ein zurückgezogenes Penthouse mit Privatsphäre, Dachterrasse und lichtdurchfluteten Wohnbereichen. Ideal für diskrete Käufer, die hochwertige Architektur und Naturanbindung kombinieren möchten.",
+//         highlights: ["Private Dachterrasse", "Aufzug direkt in die Wohnung", "2 TG-Stellplätze"],
+//         features: ["Kamin", "Klimatisierung", "Gäste-WC", "Smart Lighting"],
+//         gallery: [
+//             "/assets/images/real-estate/realestate6.jpg",
+//             "/assets/images/real-estate/realestate7.jpg",
+//             "/assets/images/real-estate/realestate8.jpg",
+//         ],
+//         // videoSrc: "/assets/videos/penthouse.mp4",
+//     },
+
+//     re3: {
+//         price: 890000,
+//         geo: { lat: 48.2439, lng: 10.3626 }, // Dummy
+//         currency: "EUR",
+//         plotArea: 1620,
+//         commissionText: "3,57% inkl. MwSt. Käuferprovision",
+//         availability: "Nach Absprache",
+//         description:
+//             "Großzügiges Grundstück mit Weitblick in begehrter Höhenlage. Ideale Voraussetzungen für ein modernes Einfamilienhaus oder ein anspruchsvolles Chalet-Konzept (vorbehaltlich Genehmigung).",
+//         highlights: ["Panoramablick", "Ruhige Lage", "Sehr gute Anbindung"],
+//         features: ["Süd-West Ausrichtung", "Anliegerstraße", "Erschließung in der Nähe"],
+//         gallery: [
+//             "/assets/images/real-estate/realestate9.jpg",
+//             "/assets/images/real-estate/realestate10.jpg",
+//         ],
+//     },
+
+//     re4: {
+//         price: 2790000,
+//         geo: { lat: 48.2439, lng: 10.3626 }, // Dummy
+//         currency: "EUR",
+//         livingArea: 265,
+//         plotArea: 740,
+//         rooms: 6,
+//         bedrooms: 4,
+//         bathrooms: 3,
+//         yearBuilt: 2020,
+//         energyClass: "A",
+//         heatingType: "Wärmepumpe",
+//         commissionText: "3,57% inkl. MwSt. Käuferprovision",
+//         availability: "Nach Absprache",
+//         description:
+//             "Puristische Architektur mit klaren Linien, großformatigen Glasflächen und privatem Außenbereich. Der beheizte Pool und die hochwertige Ausstattung machen dieses Objekt zu einem ganzjährigen Rückzugsort.",
+//         highlights: ["Beheizter Pool", "Offene Galerie", "Private Lounge-Terrasse"],
+//         features: ["Naturstein", "Einbauküche", "Home Office", "Elektrische Verschattung"],
+//         gallery: [
+//             "/assets/images/real-estate/realestate1.jpg",
+//             "/assets/images/real-estate/realestate5.jpg",
+//             "/assets/images/real-estate/realestate8.jpg",
+//         ],
+//     },
+
+//     re5: {
+//         price: 3180000,
+//         currency: "EUR",
+//         livingArea: 290,
+//         plotArea: 910,
+//         rooms: 7,
+//         bedrooms: 4,
+//         bathrooms: 3,
+//         yearBuilt: 2017,
+//         energyClass: "A",
+//         heatingType: "Pellet + Solarthermie",
+//         commissionText: "3,57% inkl. MwSt. Käuferprovision",
+//         availability: "Nach Absprache",
+//         description:
+//             "Architektonisches Statement in Hanglage mit Terrassierung und beeindruckender Lichtführung. Ein Zuhause, das Design und Alltagstauglichkeit auf höchstem Niveau verbindet.",
+//         highlights: ["Hanglage mit Terrassen", "Weitblick", "Doppelgarage"],
+//         features: ["Sauna", "Fitnessraum", "Hauswirtschaftsraum", "Outdoor-Küche"],
+//         gallery: [
+//             "/assets/images/real-estate/realestate2.jpg",
+//             "/assets/images/real-estate/realestate7.jpg",
+//             "/assets/images/real-estate/realestate11.jpg",
+//         ],
+//     },
+
+//     re6: {
+//         price: 4650000,
+//         geo: { lat: 48.2439, lng: 10.3626 }, // Dummy
+//         currency: "EUR",
+//         livingArea: 410,
+//         plotArea: 5200,
+//         rooms: 10,
+//         bedrooms: 6,
+//         bathrooms: 5,
+//         yearBuilt: 2012,
+//         energyClass: "B",
+//         heatingType: "Biomasse",
+//         commissionText: "3,57% inkl. MwSt. Käuferprovision",
+//         availability: "Nach Absprache",
+//         description:
+//             "Ein außergewöhnliches Landhaus mit eigenem Privatsee und weitläufigem Park. Absolute Privatsphäre, repräsentative Räume und ein unvergleichliches Naturerlebnis.",
+//         highlights: ["Privatsee", "Parkähnliches Grundstück", "Gästehaus"],
+//         features: ["Bootssteg", "Weinkeller", "Kaminlounge", "Security-System"],
+//         gallery: [
+//             "/assets/images/real-estate/realestate7.jpg",
+//             "/assets/images/real-estate/realestate8.jpg",
+//             "/assets/images/real-estate/realestate9.jpg",
+//         ],
+//     },
+
+//     re7: {
+//         price: 8900000,
+//         geo: { lat: 48.2439, lng: 10.3626 }, // Dummy
+//         currency: "EUR",
+//         livingArea: 720,
+//         plotArea: 11000,
+//         rooms: 14,
+//         bedrooms: 8,
+//         bathrooms: 7,
+//         yearBuilt: 2008,
+//         energyClass: "B",
+//         heatingType: "Gas + Solar",
+//         commissionText: "3,57% inkl. MwSt. Käuferprovision",
+//         availability: "Diskret / nach Vereinbarung",
+//         description:
+//             "Repräsentatives Anwesen mit Park, Blickachsen und hochwertigen Details. Ideal für Käufer, die Diskretion und außergewöhnliche Qualität in bester Lage suchen.",
+//         highlights: ["Parkanlage", "Indoor Spa", "Gäste-Trakt"],
+//         features: ["Indoor-Pool", "Spa & Sauna", "Aufzug", "Personalwohnung", "Weinkeller"],
+//         gallery: [
+//             "/assets/images/real-estate/realestate10.jpg",
+//             "/assets/images/real-estate/realestate11.jpg",
+//             "/assets/images/real-estate/realestate6.jpg",
+//         ],
+//     },
+
+//     re8: {
+//         price: 3290000,
+//         geo: { lat: 48.2439, lng: 10.3626 }, // Dummy
+//         currency: "EUR",
+//         livingArea: 240,
+//         plotArea: 620,
+//         rooms: 6,
+//         bedrooms: 4,
+//         bathrooms: 3,
+//         yearBuilt: 2018,
+//         energyClass: "A",
+//         heatingType: "Wärmepumpe",
+//         commissionText: "3,57% inkl. MwSt. Käuferprovision",
+//         availability: "Saison 2026 verfügbar",
+//         description:
+//             "Modernes Chalet mit alpinem Charakter: warme Materialien, großzügige Sichtachsen und perfekte Balance aus Design und Gemütlichkeit.",
+//         highlights: ["Bergblick", "Offener Kamin", "Ski-Room"],
+//         features: ["Sauna", "Kamin", "Ski-/Bike-Room", "Panorama-Terrasse", "E-Ladestation"],
+//         gallery: [
+//             "/assets/images/real-estate/realestate9.jpg",
+//             "/assets/images/real-estate/realestate4.jpg",
+//             "/assets/images/real-estate/realestate2.jpg",
+//         ],
+//     },
+
+//     re9: {
+//         price: 0,
+//         currency: "EUR",
+//         geo: { lat: 48.2439, lng: 10.3626 }, // Dummy
+//         livingArea: 360,
+//         plotArea: 1200,
+//         rooms: 8,
+//         bedrooms: 5,
+//         bathrooms: 4,
+//         yearBuilt: 2016,
+//         energyClass: "A",
+//         heatingType: "Wärmepumpe",
+//         commissionText: "3,57% inkl. MwSt. Käuferprovision",
+//         availability: "Verkauft",
+//         description:
+//             "Exklusive Villa mit Infinity Pool und Blick auf den See. Dieses Objekt ist bereits verkauft, dient jedoch als Referenz für ähnliche Off-Market Angebote.",
+//         highlights: ["Infinity Pool", "Seeblick", "Off-Market Referenz"],
+//         features: ["Outdoor Lounge", "Smart Home", "Weinkeller"],
+//         gallery: [
+//             "/assets/images/real-estate/realestate1.jpg",
+//             "/assets/images/real-estate/realestate3.jpg",
+//         ],
+//     },
+
+//     re10: {
+//         price: 1980000,
+//         geo: { lat: 48.2439, lng: 10.3626 }, // Dummy
+//         currency: "EUR",
+//         livingArea: 215,
+//         plotArea: 4300,
+//         rooms: 6,
+//         bedrooms: 3,
+//         bathrooms: 2,
+//         yearBuilt: 2014,
+//         energyClass: "B",
+//         heatingType: "Pellet",
+//         commissionText: "3,57% inkl. MwSt. Käuferprovision",
+//         availability: "Nach Absprache",
+//         description:
+//             "Rückzugsort im Grünen: Waldresidenz mit großem Grundstück, ruhiger Zufahrt und behaglicher Atmosphäre.",
+//         highlights: ["Sehr ruhige Lage", "Großes Grundstück", "Home Office möglich"],
+//         features: ["Kamin", "Werkstatt", "Gartenhaus", "Carport"],
+//         gallery: [
+//             "/assets/images/real-estate/realestate5.jpg",
+//             "/assets/images/real-estate/realestate6.jpg",
+//             "/assets/images/real-estate/realestate11.jpg",
+//         ],
+//     },
+
+//     re11: {
+//         price: 2150000,
+//         geo: { lat: 48.2439, lng: 10.3626 }, // Dummy
+//         currency: "EUR",
+//         plotArea: 980,
+//         commissionText: "3,57% inkl. MwSt. Käuferprovision",
+//         availability: "Nach Absprache",
+//         description:
+//             "Seltenes Seegrundstück mit privatem Steg. Perfekt für eine außergewöhnliche Neubauplanung (vorbehaltlich Genehmigungen).",
+//         highlights: ["Privater Steg", "Direkter Seezugang", "Rarität"],
+//         features: ["Süd-Ausrichtung", "Ruhige Nachbarschaft", "Gute Infrastruktur"],
+//         gallery: [
+//             "/assets/images/real-estate/realestate2.jpg",
+//             "/assets/images/real-estate/realestate8.jpg",
+//         ],
+//     },
+// };
+
+// export async function getAllEstates(): Promise<Listing[]> {
+//     const rows = await getListings();
+//     return rows.flatMap((r) => r.items);
+// }
+
+// export async function getEstateBySlug(slug: string): Promise<EstateDetails | null> {
+//     const all = await getListings();
+//     const base = all.find((x) => x.slug === slug);
+//     if (!base) return null;
+
+//     const details = estateDetailsById[base.id] ?? {};
+//     return { ...base, ...details };
+// }
