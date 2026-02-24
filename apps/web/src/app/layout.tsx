@@ -17,9 +17,7 @@ export default function RootLayout({
     <html lang="en" className="">
       <ConsentProvider>
         <CookieBanner />
-        <body className={`$ antialiased mt-14 bg-[var(--a-black-3)] `}>
-          {children}
-        </body>
+        <body className={`$ antialiased mt-14 bg-[#050B1A] `}>{children}</body>
       </ConsentProvider>
     </html>
   );
