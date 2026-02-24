@@ -586,6 +586,16 @@ export async function getEstateBySlug(slug: string): Promise<ListingFull | null>
     return all.find((x) => x.slug === slug) ?? null;
 }
 
+export async function getAllListingSlugs(): Promise<string[]> {
+    const all = await getListings();
+    return all.map((l: any) => l.slug ?? l.id).filter(Boolean);
+}
+
+export async function getListingBySlug(slug: string): Promise<EstateDetails | null> {
+    // nutzt deine bestehende Funktion (Mock: Merge aus base+details)
+    return getEstateBySlug(slug) as unknown as EstateDetails | null;
+}
+
 
 
 
