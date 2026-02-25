@@ -1,7 +1,6 @@
 // src/lib/seo/referencesMetadata.ts
 import type { Metadata } from "next";
-import type { ReferenceProperty } from "@/components/referenzen/types";
-import type { ReferenceFull } from "@/components/referenzen/references";
+import { Reference } from "../types/references";
 
 const SITE_NAME = "Immowo Ventures";
 const BASE_URL = process.env.NEXT_PUBLIC_SITE_URL;
@@ -15,10 +14,10 @@ function truncate(text: string, max = 160) {
     return t.length <= max ? t : t.slice(0, max - 1) + "…";
 }
 
-export function buildReferenceMetadata(ref: ReferenceFull): Metadata {
+export function buildReferenceMetadata(ref: Reference): Metadata {
     const url = BASE_URL ? `${BASE_URL}/referenzen/${ref.slug}` : undefined;
 
-    const location = ref.locationLabel ?? ref.location ?? "";
+    const location = ref.location?.label ?? ref.location?.region ?? "";
     const title = clean(`${ref.title}${location ? ` – ${location}` : ""} | Referenzen | ${SITE_NAME}`);
 
     const descBits = [
