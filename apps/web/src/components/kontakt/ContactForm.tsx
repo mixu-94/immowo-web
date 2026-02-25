@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import React, { useMemo, useRef, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import {
   Mail,
@@ -19,14 +19,37 @@ import {
 
 type DoneState = null | "ok" | string;
 
-export function ContactForm() {
+type ContactFormProps = {
+  /**
+   * Optional: Objekt-Kontext direkt übergeben (z.B. von der Objektseite).
+   * Falls nicht gesetzt, wird wie bisher aus den Query Params gelesen.
+   */
+  listing?: string;
+  listingTitle?: string;
+};
+
+function isValidEmail(email: string) {
+  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim());
+}
+
+function safeDuration(v: FormDataEntryValue | null, fallback = 15) {
+  const n = Number(v ?? fallback);
+  if (!Number.isFinite(n)) return fallback;
+  // clamp auf sinnvolle Werte
+  return Math.max(15, Math.min(120, Math.round(n)));
+}
+
+export function ContactForm(props: ContactFormProps) {
   const [loading, setLoading] = useState(false);
   const [done, setDone] = useState<DoneState>(null);
 
+  const formRef = useRef<HTMLFormElement | null>(null);
   const params = useSearchParams();
 
-  const listing = params.get("listing") ?? "";
-  const listingTitle = params.get("title") ?? "";
+  // ✅ Objekt-Kontext: Props > Query
+  const listing = (props.listing ?? params.get("listing") ?? "").trim();
+  const listingTitle = (props.listingTitle ?? params.get("title") ?? "").trim();
+
   const listingHref = listing ? `/objekte/${encodeURIComponent(listing)}` : "";
 
   const defaultTopic = useMemo(() => {
@@ -38,51 +61,111 @@ export function ContactForm() {
   async function onSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
     setDone(null);
+
+    // ✅ FIX: Form-Element VOR async/await sichern (sonst kann currentTarget null werden)
+    const formEl = e.currentTarget;
+
     setLoading(true);
 
-    const form = new FormData(e.currentTarget);
+    const form = new FormData(formEl);
 
-    const payload = {
-      name: String(form.get("name") ?? ""),
-      email: String(form.get("email") ?? ""),
-      phone: String(form.get("phone") ?? ""),
-      contactPreference: String(form.get("contactPreference") ?? "telefon"),
-      topic: String(form.get("topic") ?? "allgemein"),
-      message: String(form.get("message") ?? ""),
-      callbackRequested: form.get("callbackRequested") === "on",
+    const name = String(form.get("name") ?? "").trim();
+    const email = String(form.get("email") ?? "").trim();
+    const phone = String(form.get("phone") ?? "").trim();
 
-      // Terminwunsch (MVP)
-      preferredDate: String(form.get("preferredDate") ?? ""),
-      preferredTimeWindow: String(form.get("preferredTimeWindow") ?? ""),
-      preferredTime: String(form.get("preferredTime") ?? ""),
-      durationMinutes: Number(form.get("durationMinutes") ?? 15),
+    const contactPreference = String(
+      form.get("contactPreference") ?? "telefon",
+    ).trim();
+    const topic = String(form.get("topic") ?? "allgemein").trim();
+    const message = String(form.get("message") ?? "").trim();
+    const callbackRequested = form.get("callbackRequested") === "on";
 
-      // Objekt-Kontext (neu)
-      listing: String(form.get("listing") ?? ""),
-      listingTitle: String(form.get("listingTitle") ?? ""),
+    const preferredDate = String(form.get("preferredDate") ?? "").trim();
+    const preferredTimeWindow = String(
+      form.get("preferredTimeWindow") ?? "",
+    ).trim();
+    const preferredTime = String(form.get("preferredTime") ?? "").trim();
+    const durationMinutes = safeDuration(form.get("durationMinutes"), 15);
 
-      // honeypot
-      website: String(form.get("website") ?? ""),
-      tz: Intl.DateTimeFormat().resolvedOptions().timeZone,
-    };
+    // Objekt-Kontext (kommt aus hidden inputs oder Props/Query)
+    const listingValue = String(form.get("listing") ?? listing).trim();
+    const listingTitleValue = String(
+      form.get("listingTitle") ?? listingTitle,
+    ).trim();
 
-    const res = await fetch("/api/contact", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(payload),
-    });
+    // honeypot
+    const website = String(form.get("website") ?? "").trim();
 
-    const data = (await res.json().catch(() => null)) as any;
-
-    setLoading(false);
-
-    if (!res.ok) {
-      setDone(data?.error ?? "Fehler beim Senden.");
+    // ✅ kleine Client-Validierung (spart unnötige Requests)
+    if (!name || !email) {
+      setLoading(false);
+      setDone("Bitte Name und E-Mail ausfüllen.");
+      return;
+    }
+    if (!isValidEmail(email)) {
+      setLoading(false);
+      setDone("Bitte eine gültige E-Mail-Adresse angeben.");
+      return;
+    }
+    if (!message && !callbackRequested) {
+      setLoading(false);
+      setDone("Bitte Nachricht ausfüllen oder Rückruf anfragen.");
+      return;
+    }
+    if (callbackRequested && !phone) {
+      setLoading(false);
+      setDone("Für einen Rückruf bitte eine Telefonnummer angeben.");
       return;
     }
 
-    setDone("ok");
-    e.currentTarget.reset();
+    const payload = {
+      name,
+      email,
+      phone,
+      contactPreference,
+      topic,
+      message,
+      callbackRequested,
+
+      // Terminwunsch (MVP)
+      preferredDate,
+      preferredTimeWindow,
+      preferredTime,
+      durationMinutes,
+
+      // Objekt-Kontext
+      listing: listingValue,
+      listingTitle: listingTitleValue,
+
+      // honeypot
+      website,
+      tz: Intl.DateTimeFormat().resolvedOptions().timeZone,
+    };
+
+    try {
+      const res = await fetch("/api/contact", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      });
+
+      const data = (await res.json().catch(() => null)) as any;
+
+      setLoading(false);
+
+      if (!res.ok || !data?.ok) {
+        setDone(data?.error ?? "Fehler beim Senden.");
+        return;
+      }
+
+      setDone("ok");
+
+      // ✅ FIX: reset über gesicherte Referenz
+      formEl.reset();
+    } catch {
+      setLoading(false);
+      setDone("Netzwerkfehler. Bitte später erneut versuchen.");
+    }
   }
 
   return (
@@ -139,7 +222,7 @@ export function ContactForm() {
         </div>
       ) : null}
 
-      <form onSubmit={onSubmit} className="space-y-6">
+      <form ref={formRef} onSubmit={onSubmit} className="space-y-6">
         {/* Honeypot */}
         <input
           name="website"
@@ -149,15 +232,21 @@ export function ContactForm() {
         />
 
         {/* ✅ Hidden Objekt-Kontext */}
-        <input type="hidden" name="listing" value={listing} />
-        <input type="hidden" name="listingTitle" value={listingTitle} />
+        <input type="hidden" name="listing" value={listing} readOnly />
+        <input
+          type="hidden"
+          name="listingTitle"
+          value={listingTitle}
+          readOnly
+        />
 
         <div className="grid gap-5 md:grid-cols-2">
           <Field label="Name" icon={<User className="h-5 w-5 text-white/60" />}>
             <input
               name="name"
               required
-              className="w-full bg-transparent text-white outline-none placeholder:text-white/35"
+              disabled={loading}
+              className="w-full bg-transparent text-white outline-none placeholder:text-white/35 disabled:opacity-70"
               placeholder="Max Mustermann"
             />
           </Field>
@@ -170,7 +259,8 @@ export function ContactForm() {
               name="email"
               type="email"
               required
-              className="w-full bg-transparent text-white outline-none placeholder:text-white/35"
+              disabled={loading}
+              className="w-full bg-transparent text-white outline-none placeholder:text-white/35 disabled:opacity-70"
               placeholder="name@domain.de"
             />
           </Field>
@@ -185,7 +275,8 @@ export function ContactForm() {
               <input
                 name="phone"
                 type="tel"
-                className="w-full bg-transparent text-white outline-none placeholder:text-white/35"
+                disabled={loading}
+                className="w-full bg-transparent text-white outline-none placeholder:text-white/35 disabled:opacity-70"
                 placeholder="+49 170 1234567"
                 inputMode="tel"
                 autoComplete="tel"
@@ -202,6 +293,7 @@ export function ContactForm() {
                 type="checkbox"
                 name="callbackRequested"
                 className="mt-1 h-4 w-4 accent-white"
+                disabled={loading}
               />
               <span className="leading-relaxed">
                 Bitte um Rückruf{" "}
@@ -219,6 +311,7 @@ export function ContactForm() {
                   { value: "email", label: "E-Mail" },
                 ]}
                 defaultValue="telefon"
+                disabled={loading}
               />
 
               <Select
@@ -236,6 +329,7 @@ export function ContactForm() {
                   { value: "verkauf", label: "Verkauf / Vermarktung" },
                 ]}
                 defaultValue={defaultTopic}
+                disabled={loading}
               />
             </div>
           </div>
@@ -258,7 +352,8 @@ export function ContactForm() {
               <input
                 type="date"
                 name="preferredDate"
-                className="w-full bg-transparent text-white outline-none"
+                disabled={loading}
+                className="w-full bg-transparent text-white outline-none disabled:opacity-70"
               />
             </Field>
 
@@ -274,6 +369,7 @@ export function ContactForm() {
                 { value: "18-20", label: "18:00 – 20:00" },
               ]}
               defaultValue=""
+              disabled={loading}
             />
 
             <Select
@@ -284,8 +380,10 @@ export function ContactForm() {
                 { value: "15", label: "15 Min." },
                 { value: "30", label: "30 Min." },
                 { value: "45", label: "45 Min." },
+                { value: "60", label: "60 Min." },
               ]}
               defaultValue="15"
+              disabled={loading}
             />
           </div>
 
@@ -297,7 +395,8 @@ export function ContactForm() {
               <input
                 type="time"
                 name="preferredTime"
-                className="w-full bg-transparent text-white outline-none"
+                disabled={loading}
+                className="w-full bg-transparent text-white outline-none disabled:opacity-70"
               />
             </Field>
             <p className="mt-2 text-xs text-white/55">
@@ -320,7 +419,8 @@ export function ContactForm() {
             <textarea
               name="message"
               rows={6}
-              className="w-full resize-none bg-transparent text-white outline-none placeholder:text-white/35"
+              disabled={loading}
+              className="w-full resize-none bg-transparent text-white outline-none placeholder:text-white/35 disabled:opacity-70"
               placeholder="Kurzbeschreibung (z.B. Objekt, Standort, Budget, Fragen)…"
             />
           </div>
@@ -332,7 +432,7 @@ export function ContactForm() {
         <button
           type="submit"
           disabled={loading}
-          className="inline-flex w-full items-center justify-center gap-2 rounded-2xl bg-white px-5 py-3 text-sm font-semibold text-black shadow-lg shadow-white/10 transition hover:-translate-y-0.5 hover:shadow-xl disabled:opacity-60"
+          className="inline-flex w-full items-center justify-center gap-2 rounded-2xl bg-white px-5 py-3 text-sm font-semibold text-black shadow-lg shadow-white/10 transition hover:-translate-y-0.5 hover:shadow-xl disabled:cursor-not-allowed disabled:opacity-60"
         >
           <Send className="h-4 w-4" />
           {loading ? "Senden…" : "Absenden"}
@@ -394,12 +494,14 @@ function Select({
   icon,
   options,
   defaultValue,
+  disabled,
 }: {
   name: string;
   label: string;
   icon: React.ReactNode;
   options: { value: string; label: string }[];
   defaultValue: string;
+  disabled?: boolean;
 }) {
   return (
     <div>
@@ -410,8 +512,9 @@ function Select({
         {icon}
         <select
           name={name}
-          className="w-full bg-transparent text-white outline-none"
+          className="w-full bg-transparent text-white outline-none disabled:opacity-70"
           defaultValue={defaultValue}
+          disabled={disabled}
         >
           {options.map((o) => (
             <option key={o.value} value={o.value} className="text-black">
