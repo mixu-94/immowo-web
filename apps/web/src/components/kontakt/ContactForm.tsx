@@ -428,6 +428,19 @@ export function ContactForm(props: ContactFormProps) {
             Wenn Sie nur einen Rückruf möchten, kann das Feld leer bleiben.
           </p>
         </div>
+        <p className="text-xs text-white/50">
+          Wenn Sie uns über das Kontaktformular kontaktieren, verarbeiten wir
+          Ihre Angaben zur Bearbeitung Ihrer Anfrage und zur Kontaktaufnahme.
+          Weitere Informationen (u. a. zu Speicherdauer, Empfängern und Ihren
+          Rechten) finden Sie in unserer{" "}
+          <a
+            href="/datenschutz"
+            className="underline underline-offset-2 hover:text-white"
+          >
+            Datenschutzerklärung
+          </a>
+          .
+        </p>
 
         <button
           type="submit"

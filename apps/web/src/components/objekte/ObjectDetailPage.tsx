@@ -6,10 +6,15 @@ import { ObjectMain } from "./ObjectMain";
 import { ObjectTrust } from "./ObjectTrust";
 import { ObjectCTA } from "./ObjectCTA";
 import { ObjectDownloadCard } from "./ObjectDownloadCard";
+import { CommissionGateEnforcer } from "../commission/CommissionGateEnforcer";
 
 export function ObjectDetailPage({ listing }: { listing: EstateDetails }) {
   return (
     <ObjectShell>
+      <CommissionGateEnforcer
+        slug={listing.slug}
+        commission={listing.buyerCommission}
+      />
       <ObjectHero listing={listing} />
       <ObjectMain listing={listing} />
       <ObjectTrust />

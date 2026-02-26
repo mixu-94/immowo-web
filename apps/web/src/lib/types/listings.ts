@@ -138,6 +138,25 @@ export type ListingFacts = {
     };
 };
 
+export type BuyerCommission = {
+    /** z.B. 3.57% oder 5950 EUR */
+    kind: "percent" | "fixed";
+    value: number;
+
+    /** i.d.R. true in DE (inkl. MwSt.) */
+    vatIncluded?: boolean;
+    vatRate?: number; // default 19
+
+    /** Freitext für rechtliche Nuancen */
+    note?: string;
+
+    /** typischerweise: "fällig bei notariellem Kaufvertrag" */
+    due?: string;
+
+    /** optional: "Kaufpreis" / "Beurkundung" etc */
+    basis?: string;
+};
+
 /** Preis/Verfügbarkeit */
 export type ListingPricing = {
     /** Kaufpreis, null/undefined = Preis auf Anfrage */
@@ -146,6 +165,9 @@ export type ListingPricing = {
 
     /** Courtage textlich (rechtlich wichtig, wenn relevant) */
     commissionText?: string;
+
+    /** strukturierte Käuferprovision pro Objekt */
+    buyerCommission?: BuyerCommission;
 
     /** Verfügbarkeitstext (z.B. "Sofort", "Nach Absprache") */
     availability?: string;
@@ -198,6 +220,8 @@ export type Listing = {
     /** optionaler Untertitel für Card/Detail */
     subtitle?: string;
 
+    badge?: string;
+
     /** Hero-Bild für Card/Detail */
     imageSrc?: string;
 
@@ -206,6 +230,7 @@ export type Listing = {
 
     /** location quick label (legacy), besser: location.label */
     location?: string;
+    pricing?: ListingPricing;
 };
 
 /**
