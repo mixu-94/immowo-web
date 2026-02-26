@@ -3,62 +3,88 @@
 @tailwind utilities;
 
 /* ==========================================================================
-   GLOBAL THEME TOKENS
-   - Ziel: später alle Farben über Variablen steuern
-   - Legacy-Bridge: bestehende Tokens wie --a-black-3 bleiben nutzbar
+   GLOBAL THEME TOKENS (Luxury Real Estate)
+   - Navy + Champagne Gold + Ivory
+   - Includes Legacy bridge tokens (a--black-3, etc.)
+   - Radii unified and shadcn (--radius) aligned
    ========================================================================== */
 
 :root {
   /* ------------------------------
-     Brand (Immobilien: Navy / Gold)
+     Brand palette
      ------------------------------ */
+  --brand-navy-950: #061523; /* deep navy */
   --brand-navy-900: #071a2b;
   --brand-navy-800: #0b243a;
   --brand-navy-700: #123454;
 
-  --brand-gold-500: #c9a24a;
-  --brand-gold-400: #e2c57a;
+  /* Champagne Gold (more premium than saturated yellow) */
+  --brand-gold-600: #b88d3a;
+  --brand-gold-500: #d6b56d; /* primary accent */
+  --brand-gold-400: #e6cd8f; /* hover/highlight */
 
-  /* ------------------------------
-     Neutrals
-     ------------------------------ */
+  /* Ivory / Neutrals */
   --neutral-0: #ffffff;
-  --neutral-50: #faf7f0; /* ivory */
-  --neutral-100: #efe7d6; /* sand */
-  --neutral-700: #2b3642; /* slate for text on light */
-  --neutral-500: #667281;
-
-  --neutral-950: #0b0f14; /* deep charcoal */
-  --neutral-900: #0e1116;
+  --neutral-ivory: #faf7f0;
+  --neutral-ivory-2: #f3ecdf;
 
   /* ------------------------------
-     Semantic tokens (use these in future)
+     Semantic tokens (use these)
      ------------------------------ */
-  --color-bg: var(--brand-navy-900);
-  --color-surface: rgba(255, 255, 255, 0.04);
-  --color-surface-2: rgba(255, 255, 255, 0.06);
-  --color-border: rgba(255, 255, 255, 0.1);
-
+  --color-bg: var(--brand-navy-950);
   --color-text: rgba(255, 255, 255, 0.92);
   --color-text-muted: rgba(255, 255, 255, 0.68);
 
+  /* Surfaces: subtle, “expensive” */
+  --color-surface: rgba(255, 255, 255, 0.04);
+  --color-surface-2: rgba(255, 255, 255, 0.06);
+  --color-surface-3: rgba(255, 255, 255, 0.08);
+
+  /* Borders: very soft */
+  --color-border: rgba(255, 255, 255, 0.1);
+  --color-border-strong: rgba(255, 255, 255, 0.16);
+
+  /* Accent */
   --color-accent: var(--brand-gold-500);
   --color-accent-hover: var(--brand-gold-400);
+  --color-accent-strong: var(--brand-gold-600);
 
+  /* Links */
   --color-link: var(--brand-gold-400);
   --color-link-hover: var(--brand-gold-500);
 
+  /* Status */
   --color-danger: #c91f37;
 
   /* ------------------------------
-     Legacy tokens (keeps your current code working)
-     - You can gradually replace these in components
+     Typography
+     ------------------------------ */
+  --font-sans:
+    "Outfit", system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
+  --font-display: "Gigalypse", var(--font-sans);
+
+  /* ------------------------------
+     Radius + shadow (consistent rounded design)
+     ------------------------------ */
+  --radius-sm: 12px;
+  --radius-lg: 16px;
+  --radius-xl: 20px;
+
+  /* shadcn token used by many components */
+  --radius: var(--radius-lg);
+
+  --shadow-soft: 0 18px 45px rgba(0, 0, 0, 0.35);
+  --shadow-card: 0 18px 40px rgba(0, 0, 0, 0.25);
+
+  /* ------------------------------
+     Legacy bridge tokens
+     (keep old code working; migrate later)
      ------------------------------ */
   --a-red: var(--color-danger);
 
-  --a-black: var(--brand-navy-900);
-  --a-black-2: var(--brand-navy-800);
-  --a-black-3: var(--neutral-950);
+  --a-black: var(--brand-navy-950);
+  --a-black-2: var(--brand-navy-900);
+  --a-black-3: #0b0f14; /* keep as deep neutral if you relied on it */
 
   --a-grey-7: rgba(255, 255, 255, 0.08);
   --a-grey-6: rgba(255, 255, 255, 0.12);
@@ -77,42 +103,11 @@
   --a-yellow: #f8f7d7;
 
   --a-white: #f2f2f2;
-
-  /* ------------------------------
-     Typography helpers
-     ------------------------------ */
-  --font-sans:
-    "Outfit", system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
-  --font-display: "Gigalypse", var(--font-sans);
-
-  /* ------------------------------
-     Radius / shadows (optional)
-     ------------------------------ */
-  --radius-lg: 16px;
-  --radius-xl: 20px;
-
-  --shadow-soft: 0 12px 30px rgba(0, 0, 0, 0.25);
-}
-
-/* Optional: light theme if you ever need it
-   You can toggle by setting <html class="light"> */
-html.light {
-  --color-bg: var(--neutral-50);
-  --color-surface: rgba(0, 0, 0, 0.03);
-  --color-surface-2: rgba(0, 0, 0, 0.05);
-  --color-border: rgba(0, 0, 0, 0.1);
-
-  --color-text: rgba(15, 23, 42, 0.92);
-  --color-text-muted: rgba(15, 23, 42, 0.6);
-
-  --color-link: #1c5d99;
-  --color-link-hover: #0b4f87;
 }
 
 /* ==========================================================================
    FONTS
    ========================================================================== */
-
 @font-face {
   font-family: "Gigalypse";
   src: url("/fonts/Gigalypse.otf") format("opentype");
@@ -144,7 +139,6 @@ html.light {
   font-display: swap;
 }
 
-/* Convenience classes (optional) */
 .gigalypse {
   font-family: var(--font-display);
 }
@@ -159,10 +153,8 @@ html.light {
 }
 
 /* ==========================================================================
-   BASE STYLES
-   - Keep these minimal; Tailwind handles most styling.
+   BASE
    ========================================================================== */
-
 html {
   scroll-behavior: smooth;
 }
@@ -171,13 +163,26 @@ body {
   font-family: var(--font-sans);
   color: var(--color-text);
   background: var(--color-bg);
+
+  /* subtle premium vignette */
+  background-image:
+    radial-gradient(
+      80% 60% at 50% 0%,
+      rgba(214, 181, 109, 0.1),
+      transparent 60%
+    ),
+    radial-gradient(
+      80% 60% at 50% 100%,
+      rgba(255, 255, 255, 0.04),
+      transparent 60%
+    );
+  background-attachment: fixed;
+
   text-rendering: optimizeLegibility;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
 }
 
-/* Headings: uppercasing globally is often too aggressive.
-   If you still want uppercase, do it per-component with Tailwind. */
 h1,
 h2,
 h3,
@@ -185,11 +190,9 @@ h4,
 h5,
 h6 {
   color: var(--color-text);
-  font-family: var(--font-sans);
   font-weight: 700;
 }
 
-/* Links */
 a {
   color: var(--color-link);
   text-decoration: none;
@@ -198,16 +201,13 @@ a:hover {
   color: var(--color-link-hover);
 }
 
-/* Text selection */
 ::selection {
-  background: rgba(201, 162, 74, 0.35); /* gold-ish */
+  background: rgba(214, 181, 109, 0.3);
 }
 
 /* ==========================================================================
    SCROLLBAR (WebKit)
-   - subtle, premium
    ========================================================================== */
-
 ::-webkit-scrollbar {
   width: 10px;
   height: 10px;
@@ -216,36 +216,27 @@ a:hover {
   background: rgba(255, 255, 255, 0.04);
 }
 ::-webkit-scrollbar-thumb {
-  background: rgba(201, 162, 74, 0.35);
+  background: rgba(214, 181, 109, 0.38);
   border-radius: 999px;
-  border: 2px solid rgba(0, 0, 0, 0); /* keeps thumb slimmer */
+  border: 2px solid rgba(0, 0, 0, 0);
   background-clip: padding-box;
 }
 ::-webkit-scrollbar-thumb:hover {
-  background: rgba(201, 162, 74, 0.55);
+  background: rgba(214, 181, 109, 0.55);
 }
 
 /* ==========================================================================
    TAILWIND LAYERS
    ========================================================================== */
-
 @layer base {
-  /* If you want to enforce a consistent focus style everywhere */
+  /* Consistent focus across the app */
   :focus-visible {
-    outline: 2px solid rgba(201, 162, 74, 0.65);
+    outline: 2px solid rgba(214, 181, 109, 0.7);
     outline-offset: 2px;
     border-radius: 10px;
   }
-  /* --------------------------------------------------------------------------
-     CONSISTENT RADIUS SYSTEM (global)
-     - Ziel: überall gleiche Rundungen
-     - shadcn nutzt häufig --radius → wir setzen das auf unser System
-     -------------------------------------------------------------------------- */
-  :root {
-    --radius: var(--radius-lg); /* shadcn default token */
-  }
 
-  /* Buttons, Inputs, Dialogs etc. (shadcn/tailwind) */
+  /* Normalize “mixed rounded vs square” */
   .rounded-lg {
     border-radius: var(--radius-lg) !important;
   }
@@ -255,15 +246,10 @@ a:hover {
   .rounded-2xl {
     border-radius: calc(var(--radius-xl) + 4px) !important;
   }
-
-  /* Optional: ein “Premium look” Standard für Karten/Modals */
-  .card-rounded {
-    border-radius: var(--radius-xl);
-  }
 }
 
 @layer utilities {
-  /* Rounded shape helpers (kept from your old file, cleaned up) */
+  /* Legacy shape helpers */
   .rounded-horizontal {
     border-radius: 30% / 10%;
   }
@@ -274,8 +260,7 @@ a:hover {
     border-radius: 30% / 15%;
   }
 
-  /* Legacy button class (still usable)
-     NOTE: move to component-level Tailwind later if possible */
+  /* Premium button baseline (optional legacy class) */
   .btn-custom {
     @apply rounded-full border px-8 py-3 transition-all duration-300 ease-in-out;
     border-color: var(--color-border);
@@ -283,11 +268,11 @@ a:hover {
     background: transparent;
   }
   .btn-custom:hover {
-    transform: scale(1.04);
-    background: rgba(201, 162, 74, 0.2);
-    border-color: rgba(201, 162, 74, 0.55);
+    transform: scale(1.03);
+    background: rgba(214, 181, 109, 0.14);
+    border-color: rgba(214, 181, 109, 0.45);
   }
   .btn-custom:active {
-    transform: scale(0.96);
+    transform: scale(0.98);
   }
 }

@@ -953,26 +953,16 @@ const categories: Array<{ id: string; title: string; href: string }> = [
 
 function buildCategoryRows(items: ListingFull[]): CategoryRow[] {
     return categories.map((cat) => {
-        const catItems = items
-            .filter((i) => i.categoryIds.includes(cat.id))
-            .map((i) => ({
-                id: i.id,
-                title: i.title,
-                imageSrc: i.imageSrc,
-                href: i.href,
-                location: i.locationLabel || i.location,
-                badge: i.badge,
-                slug: i.slug,
-            })) as unknown as Listing[];
-
+        const catItems = items.filter((i) => i.categoryIds.includes(cat.id));
         return {
             id: cat.id,
             title: cat.title,
             href: cat.href,
-            items: catItems,
+            items: catItems as any, // ListingFull enthält eh alles
         };
     });
 }
+
 
 export const categoryRows: CategoryRow[] = buildCategoryRows(estatesWithRouting);
 

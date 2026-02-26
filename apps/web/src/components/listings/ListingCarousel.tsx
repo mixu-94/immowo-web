@@ -39,11 +39,16 @@ export default function ListingCarousel({ items }: Props) {
         ›
       </button>
 
-      <div className="" ref={emblaRef}>
-        <div className="flex gap-4 ml-4 items-stretch">
+      <div ref={emblaRef} className="overflow-hidden">
+        <div className="flex items-stretch gap-4">
           {items.map((item) => (
-            <div key={item.id} className=" flex-[0_0_auto]">
-              <ListingCard item={item} />
+            <div
+              key={item.id}
+              className="
+                flex-[0_0_85%] sm:flex-[0_0_420px] lg:flex-[0_0_460px] pl-4
+              "
+            >
+              <ListingCard listing={item} className="h-full w-full" />
             </div>
           ))}
         </div>
